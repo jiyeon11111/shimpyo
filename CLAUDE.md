@@ -22,7 +22,7 @@
 pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000    # http://localhost:8000 , API 문서 /docs
 python -m backend.serve_stdlib                   # 설치 없이 같은 API (기본 라이브러리만)
-python -m pytest -q                              # 테스트 26개
+python -m pytest -q                              # 테스트 28개
 ```
 
 VS Code 실행 설정은 `.vscode/launch.json`에 있다. 환경변수는 `.env.example`을 참고한다(`.env`는 config.py가 직접 읽음).
@@ -42,7 +42,9 @@ backend/
   weather.py   기상청 단기예보(getVilageFcst TMP, REH), 30분 캐시 / 시연 모드는 data/demo
   shelters.py  가까운 쉼터, 150m 안이면 쉼터 휴식으로 바로 인정
   db.py        SQLite: riders, rests
-frontend/      빌드 없는 HTML·CSS·JS 설치형 웹앱. app.js가 화면 전부를 만든다
+frontend/      빌드 없는 HTML·CSS·JS 설치형 웹앱
+  index.html + app.js     라이더 앱 (탭: 지금, 쉼터, 내역)
+  admin.html + admin.js   지역 현황, 지자체·보험사 담당자용. 라이더 앱에는 넣지 않는다
 analysis/      분석 1~5와 온열질환 위험 모델 (# %% 셀)
 tests/
 ```
@@ -81,7 +83,10 @@ tests/
   - 바텀시트에 "다음 적립" 안내, 하루 한도 4칸 진행 막대, "다 쉬었어요, 끝내기" 버튼이 있다.
 - **적립 완료 = 레퍼런스 Walk complete**
   - 체크 원, "○원 적립됐어요", 세 칸 통계(쉰 시간, 최고 체감온도, 남은 한도), 이번 주 쉰 날, "내역 보기" 버튼과 "확인" 글자 버튼을 둔다.
-- 쉼터, 내역, 지역 탭도 같은 부품을 쓴다(히어로 카드, 썸네일 목록, 세 칸 통계, 칩 필터).
+- 쉼터, 내역 탭도 같은 부품을 쓴다(히어로 카드, 썸네일 목록, 세 칸 통계, 칩 필터).
+- **지역 현황(admin.html)** 은 라이더가 볼 화면이 아니라서 따로 뺐다. 같은 토큰과 히어로 카드를 넓게 쓴다. 담당자용이라 "보전"이라는 말을 써도 된다.
+  - 숫자 네 칸(지금 쉬는 라이더, 오늘 보전 시간, 오늘 지급 예정, 못 쉰 위험 시간), 7×7 격자 체감온도, 읽는 법.
+  - 시연 패널의 "지자체 화면 열기"로 새 창을 연다. 라이더 앱이 렌더할 때마다 `BroadcastChannel("shimpyo-demo")`로 시연 시각을 보내고, 지자체 화면은 그 시각으로 다시 불러온다. 지자체 화면은 시각을 직접 바꾸지 않는다.
 
 **색과 글꼴:**
 - **바탕:** `--bg #f3f6f4`이고 카드는 흰색이다. 짙은 면은 "그늘"인 `--forest #1c2a24`다.
@@ -115,7 +120,6 @@ tests/
 1. **uvicorn으로 실제 실행 확인.** 위 주의 참고. FastAPI와 Pydantic 버전 문제가 있으면 고친다.
 2. **화면 다듬기.**
    - 내역: 지난 날짜 기록도 날짜별로 묶어서 보여준다. 지금 API는 오늘 기록만 준다.
-   - 지역: 지자체 담당자용 화면으로 분리할지 정한다.
    - 쉬는 중 알림: 적립 시간이 끝나거나 하루 한도를 채우면 알린다.
 3. **실제 데이터 연결.**
    - 공공데이터포털 기상청 단기예보 인증키를 받아 `.env`에 넣는다.

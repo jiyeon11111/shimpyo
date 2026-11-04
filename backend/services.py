@@ -185,12 +185,12 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
     resting = paid = missed = 0
     day0 = t.replace(hour=0, minute=0)
     if config.DEMO_MODE:
+        # 지급 여부는 격자·분마다 한 번만 판정한다 (라이더 300명이 같은 49칸을 나눠 쓴다)
+        minutes = range(840, min(t.hour * 60 + t.minute, 1200))
+        eligible = {k: [m for m in minutes if judge_hour(f(day0 + timedelta(minutes=m)), m // 60).pay_eligible] for k, f in fns.items()}
         for r in _virtual_riders((me.nx, me.ny)):
-            f, p = fns[(r["nx"], r["ny"])], 0
-            for m in range(840, min(t.hour * 60 + t.minute, 1200)):
-                tm = day0 + timedelta(minutes=m)
-                if not judge_hour(f(tm), tm.hour).pay_eligible:
-                    continue
+            p = 0
+            for m in eligible[(r["nx"], r["ny"])]:
                 if r["join"] and r["st"] <= m < r["st"] + r["du"]:
                     p = min(p + 1, DAILY_CAP_HOURS * 60)
                 else:

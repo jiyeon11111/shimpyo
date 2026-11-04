@@ -1,5 +1,6 @@
 /* 쉼표 앱. 화면마다 백엔드 API를 부른다.
    흐름: 지금(홈) → 쉬는 중(몰입 화면, 탭 숨김) → 적립 완료(몰입 화면) → 내역.
+   지역 현황은 라이더 화면이 아니라서 admin.html(지자체·보험사용)로 뺐다.
    시연 모드에서는 모든 요청에 at=HH:MM(시연 시각)을 붙이고 위치는 서교동으로 고정한다. */
 (function () {
   "use strict";
@@ -175,22 +176,12 @@
     return h + (hist.has_virtual ? '<p class="note">이번 달 합계에는 시연용 가상 기록이 들어 있어요.</p>' : '');
   }
 
-  // ---------- 지역 ----------
-  function vReport(r) {
-    return '<h1 class="title top">지역 현황</h1><p class="eyebrow fig">' + r.time.slice(11) + ' 기준, 내 위치 주변 5km 격자 49칸</p>' +
-      '<section class="hero slim"><div class="map">' + r.grid.map(function (c) { return '<i style="background:' + heat(c.temp) + '" class="' + (c.me ? "me" : "") + '" title="' + c.temp + '도">' + c.temp.toFixed(1) + '</i>'; }).join("") + '</div>' +
-      '<div class="legend"><span><i style="background:var(--sun)"></i>33도</span><span><i style="background:var(--amber)"></i>35도</span><span><i style="background:var(--ember)"></i>38도 이상</span><span>흰 테두리: 내 칸</span></div>' +
-      '<div class="trio in"><div><b class="fig">' + r.resting + '<small>명</small></b><span>지금 쉬는 라이더</span></div>' +
-      '<div><b class="fig">' + Math.round(r.paid_hours) + '<small>시간</small></b><span>오늘 적립</span></div>' +
-      '<div class="warn"><b class="fig">' + r.missed_hours + '<small>시간</small></b><span>못 쉰 위험 시간</span></div></div></section>' +
-      '<div class="today"><span>오늘 지급 예정</span><b class="fig">' + won(r.amount) + '</b></div>' +
-      '<p class="note">못 쉰 시간이 많은 곳이 지원이 먼저 필요한 곳이에요.' + (r.virtual ? " 가상 라이더 " + r.virtual_riders + "명으로 계산한 시연 값이에요." : "") + '</p>';
-  }
 
   // ---------- 렌더 ----------
   var seq = 0;
   function render() {
     var my = ++seq, v = S.view, p = pos();
+    share();
     if (S.cfg && S.cfg.demo) { document.getElementById("clockT").textContent = hhmm(S.min); document.getElementById("clockR").value = S.min; }
     document.getElementById("barTime").textContent = S.cfg && S.cfg.demo ? hhmm(S.min) : new Date().toTimeString().slice(0, 5);
     var job, immersive = false;
@@ -201,8 +192,7 @@
       return vHome(x[0], x[1], x[2], x[3]);
     });
     else if (v === "shelter") job = api("shelters", Object.assign({}, p, S.filter === "rider" ? { kind: "rider" } : {})).then(vShelter);
-    else if (v === "history") job = api("history", { rider_id: 1 }).then(vHistory);
-    else job = api("report", p).then(vReport);
+    else job = api("history", { rider_id: 1 }).then(vHistory);
     return job.then(function (html) {
       if (my !== seq) return;
       phone.classList.toggle("dark", immersive);
@@ -239,6 +229,10 @@
   function showErr(e) { S.busy = false; S.banner = "<b>처리하지 못했어요.</b> " + esc(e.message); render(); }
 
   // ---------- 시연 시계 ----------
+  // 지자체 화면(admin.html)을 옆 창에 띄우면 이 시각을 따라간다. 쉼을 시작·끝낼 때도 다시 알린다.
+  var chan = "BroadcastChannel" in window ? new BroadcastChannel("shimpyo-demo") : null;
+  function share() { if (chan && S.cfg && S.cfg.demo) chan.postMessage({ min: S.min }); }
+  if (chan) chan.onmessage = function (e) { if (e.data && e.data.ask) share(); };
   var timer = null, playBtn = document.getElementById("play");
   function stop() { clearInterval(timer); timer = null; playBtn.textContent = "재생"; }
   function setMin(m) { S.min = Math.max(540, Math.min(1200, m)); render(); }

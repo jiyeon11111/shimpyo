@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쉼표 지역 현황</title>
+<meta name="theme-color" content="#1c2a24">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-page">
+<main class="admin">
+  <header class="brand">
+    <span class="word"><canvas id="miniLogo" width="56" height="68" aria-hidden="true"></canvas>쉼표<small>지자체·보험사 현황</small></span>
+    <span class="loc fig" id="when">--:--</span>
+  </header>
+  <p class="sync" id="sync"></p>
+  <div id="board" aria-live="polite"></div>
+</main>
+<script src="logo.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
