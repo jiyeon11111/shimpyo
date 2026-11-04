@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>쉼표</title>
+<meta name="theme-color" content="#e6ecea">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+  <aside class="demo" id="demo" hidden aria-label="시연 조작">
+    <h2>시연 모드 <span class="note fig" id="demoDate"></span></h2>
+    <div class="clock" id="clockT">14:00</div>
+    <input type="range" id="clockR" min="540" max="1200" step="10" value="840" aria-label="시연 시각">
+    <div class="ctrl">
+      <button class="primary" id="play">재생</button>
+      <button id="jump14">14시로</button>
+      <button id="reset">오늘 기록 지우기</button>
+    </div>
+    <p>기상값, 쉼터, 지난 기록, 리포트의 라이더 300명은 시연용 가상 데이터입니다.</p>
+  </aside>
+
+  <section class="phone" id="phone" aria-label="쉼표 앱">
+    <div class="status fig"><span id="barTime">--:--</span><span id="barPlace"></span></div>
+    <div class="screen" id="screen"></div>
+    <nav class="dock" id="dock" role="tablist" hidden>
+      <button role="tab" id="tab-home" data-v="home" aria-selected="true">지금</button>
+      <button role="tab" id="tab-shelter" data-v="shelter" aria-selected="false">쉼터</button>
+      <button role="tab" id="tab-history" data-v="history" aria-selected="false">내역</button>
+      <button role="tab" id="tab-report" data-v="report" aria-selected="false">지역</button>
+    </nav>
+  </section>
+</main>
+<script src="logo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

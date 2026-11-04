@@ -1,0 +1,10 @@
+# 서버
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+# 엔진·분석·테스트
+numpy>=1.26
+pandas>=2.1
+matplotlib>=3.8
+scikit-learn>=1.4
+pytest>=8.0

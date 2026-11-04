@@ -1,0 +1,7 @@
+__pycache__/
+*.db
+.env
+data/raw/
+data/sample/
+outputs/
+.venv/

@@ -1,0 +1,10 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "쉼표 서버 (FastAPI)", "type": "debugpy", "request": "launch", "module": "uvicorn",
+      "args": ["backend.main:app", "--reload", "--port", "8000"], "env": { "SHIMPYO_DEMO": "1" }, "jinja": false },
+    { "name": "쉼표 서버 (설치 없이)", "type": "debugpy", "request": "launch", "module": "backend.serve_stdlib",
+      "env": { "SHIMPYO_DEMO": "1" } },
+    { "name": "테스트", "type": "debugpy", "request": "launch", "module": "pytest", "args": ["-q"] }
+  ]
+}

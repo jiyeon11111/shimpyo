@@ -1,0 +1,176 @@
+/* 쉼표 앱
+   바탕은 그늘색(차가운 회녹색), 색은 열에만 쓴다. 로고의 세 색이 곧 체감온도 단계다.
+   카드·알약 대신 여백과 가는 선으로 나누고, 화면마다 눈에 띄는 것은 하나만 둔다.
+   홈의 그것은 '오늘의 시간 띠': 6시부터 22시까지 한 칸이 한 시간, 칸 색이 체감온도, 밑줄이 보전 구간. */
+:root{
+  --shade:#e6ecea;       /* 바깥 바탕: 그늘 */
+  --screen:#fbfcfb;      /* 앱 바탕 */
+  --ink:#15191c;
+  --mute:#5a6469;
+  --line:#d3dbd9;
+  --cool:#d9e1df;        /* 31도 미만 칸 */
+  --warm:#f5e2a0;        /* 31도 이상 */
+  --sun:#f2c14e;         /* 33도 이상, 로고 가장자리 */
+  --amber:#ec8a2f;       /* 35도 이상, 로고 몸통 */
+  --ember:#d4442a;       /* 38도 이상, 로고 심 */
+  --on-heat:#15191c;
+  --btn:#15191c; --on-btn:#fbfcfb;
+  --focus:#1f6feb;
+  --sans:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",system-ui,sans-serif;
+  --fig:"Overpass","Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans CJK KR",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --shade:#0f1312; --screen:#171c1b; --ink:#eef2f1; --mute:#98a3a6; --line:#2a3231; --cool:#26302e; --warm:#5c5232;
+  --sun:#e9bb4c; --amber:#ef9442; --ember:#e45a3e; --btn:#eef2f1; --on-btn:#15191c; --focus:#79b0ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --shade:#0f1312; --screen:#171c1b; --ink:#eef2f1; --mute:#98a3a6; --line:#2a3231; --cool:#26302e; --warm:#5c5232;
+  --sun:#e9bb4c; --amber:#ef9442; --ember:#e45a3e; --btn:#eef2f1; --on-btn:#15191c; --focus:#79b0ff; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--shade);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;letter-spacing:-.01em;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px;
+  -webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.fig{font-family:var(--fig);font-variant-numeric:tabular-nums;letter-spacing:0}
+h1,h2,p{margin:0}
+
+/* 배치: 데스크톱은 왼쪽 시연 패널 + 오른쪽 휴대폰, 좁으면 위아래 */
+.app{display:flex;gap:32px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.phone{width:390px;max-width:100%;min-height:780px;background:var(--screen);border-radius:28px;
+  box-shadow:0 0 0 1px var(--line);overflow:hidden;display:flex;flex-direction:column}
+.status{display:flex;justify-content:space-between;padding:14px 24px 0;font-size:13px;font-weight:600;color:var(--mute)}
+.screen{flex:1;display:flex;flex-direction:column;padding:20px 24px 24px}
+@media (max-width:480px){
+  body{padding-block:0}
+  .app{gap:0}
+  .phone{width:auto;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));min-height:100dvh;border-radius:0;box-shadow:none}
+  .status{display:none}
+}
+
+/* 아래 탭: 글자만, 선택된 탭은 위에 굵은 선 */
+.dock{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dock button{border:0;background:none;padding:14px 0 16px;font-size:13px;font-weight:600;color:var(--mute);box-shadow:inset 0 2px 0 transparent}
+.dock button[aria-selected="true"]{color:var(--ink);box-shadow:inset 0 2px 0 var(--ink)}
+
+/* 공통 */
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.head h1{font-size:22px;font-weight:700;letter-spacing:-.03em}
+.head .side{font-size:13px;color:var(--mute)}
+.sw{display:inline-block;width:10px;height:10px;vertical-align:baseline;margin-right:6px}
+.btn{width:100%;border:0;border-radius:12px;padding:18px;font-size:17px;font-weight:700;background:var(--btn);color:var(--on-btn)}
+.btn.stop{background:var(--ember);color:#fff}
+.note{font-size:13px;color:var(--mute)}
+.err{border-left:3px solid var(--ember);padding:4px 0 4px 12px;font-size:14px}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 0;font-size:14px;font-weight:600;color:var(--mute);box-shadow:inset 0 -2px 0 transparent}
+.tabs button[aria-pressed="true"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.rows .main{font-weight:600}
+.rows .sub{font-size:13px;color:var(--mute)}
+.rows .val{font-family:var(--fig);font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.empty{padding:28px 0;color:var(--mute)}
+
+/* 시작 화면 */
+.splash{flex:1;display:flex;flex-direction:column;padding:28px 0 8px}
+.splash canvas{width:96px;height:auto}
+.splash h1{font-size:40px;font-weight:800;letter-spacing:-.05em;margin-top:20px;line-height:1.1}
+.splash p{font-size:18px;margin-top:12px;line-height:1.5}
+.splash .foot{margin-top:auto;padding-top:24px;display:flex;flex-direction:column;gap:12px}
+
+/* 홈 */
+.home{display:flex;flex-direction:column;flex:1}
+.reading{margin-top:28px}
+.reading .label{font-size:14px;color:var(--mute)}
+.temp{font-family:var(--fig);font-weight:800;font-size:104px;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;margin-top:10px}
+.temp sup{font-size:40px;font-weight:700;vertical-align:top;position:relative;top:8px;margin-left:2px}
+.stage{margin-top:14px;font-size:16px;font-weight:600}
+.stage .why{display:block;font-weight:400;color:var(--mute);font-size:14px}
+
+/* 오늘의 시간 띠 */
+.strip{margin-top:28px}
+.cells{display:grid;grid-template-columns:repeat(17,1fr);gap:2px;position:relative}
+.cells i{height:34px;position:relative}
+.cells i.now::after{content:"";position:absolute;left:50%;top:-8px;bottom:-8px;width:2px;margin-left:-1px;background:var(--ink)}
+.cells i.rest{background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(21,25,28,.55) 4px 6px)}
+.pay{display:grid;grid-template-columns:repeat(17,1fr);gap:2px;margin-top:6px}
+.pay b{height:4px;background:transparent}
+.pay b.on{background:var(--ink)}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:6px}
+.strip .key{font-size:12px;color:var(--mute);margin-top:8px}
+.strip .key b{display:inline-block;width:14px;height:4px;background:var(--ink);vertical-align:middle;margin-right:6px}
+
+.ledger{margin-top:auto;padding-top:24px}
+.ledger .row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.ledger .row span:first-child{color:var(--mute)}
+.ledger .row .val{font-family:var(--fig);font-variant-numeric:tabular-nums;font-weight:700;font-size:16px}
+.where{display:flex;gap:20px;padding:12px 0 16px;border-top:1px solid var(--line)}
+.where label{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
+.where input{accent-color:var(--ink);width:18px;height:18px;margin:0}
+.done{border-top:1px solid var(--line);padding:12px 0 16px;font-size:14px}
+.done strong{display:block;font-size:16px}
+
+/* 친절한 안내: 맨 위 한 문장이 '지금 쉬면 돈이 나오는가'에 답한다 */
+.verdict{font-size:26px;font-weight:800;letter-spacing:-.04em;line-height:1.25;text-wrap:balance}
+.verdict.on{color:var(--ink)}
+.why{font-size:15px;color:var(--mute);margin-top:6px}
+.reading .temp{font-size:72px;margin-top:22px;display:flex;align-items:flex-start;gap:0}
+.reading .temp small,.timer small{font-family:var(--sans);font-size:14px;font-weight:500;color:var(--mute);letter-spacing:0;align-self:flex-end;margin:0 0 8px 10px}
+.sw.big{width:14px;height:14px;margin:12px 12px 0 0;flex:none}
+.done{border-left:4px solid var(--amber);background:color-mix(in srgb,var(--amber) 10%,transparent);padding:12px 14px;margin-top:16px;font-size:14px}
+.done strong{display:block;font-size:17px;margin-bottom:2px}
+.btn.big{display:flex;flex-direction:column;align-items:center;gap:2px;padding:16px 18px 14px;min-height:68px}
+.btn small{font-size:13px;font-weight:500;opacity:.8}
+.btn.quiet{background:none;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.btn:disabled{opacity:.55;cursor:progress}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.row.link{width:100%;border:0;background:none;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.row.link .val{font-family:var(--sans);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.note.center{text-align:center;margin-top:12px}
+.how{list-style:none;counter-reset:s;margin:28px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.how li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;row-gap:2px}
+.how li::before{content:counter(s);grid-row:span 2;font-family:var(--fig);font-weight:800;font-size:18px;color:var(--amber)}
+.how b{font-size:16px}
+.how span{font-size:13px;color:var(--mute)}
+.ledger .btn{margin-top:12px}
+
+/* 쉬는 중 */
+.timer{display:flex;font-family:var(--fig);font-weight:800;font-size:80px;margin-top:20px;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.earned{margin-top:14px;font-size:16px}
+.earned .fig{font-weight:700;font-size:22px}
+
+/* 내역 */
+.total{margin-top:24px}
+.total .fig{display:block;font-weight:800;font-size:48px;line-height:1;letter-spacing:-.02em;margin-top:6px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:24px;text-align:center;font-size:12px;color:var(--mute)}
+.week i{display:block;height:28px;background:var(--cool);margin-bottom:4px}
+.week i.y{background:var(--amber)}
+.week .t{color:var(--ink);font-weight:700}
+.sect{font-size:14px;font-weight:700;margin-top:28px}
+
+/* 쉼터 */
+.rows .rider{color:var(--ink)}
+.rows .rider .sw{background:var(--amber)}
+
+/* 리포트: 7×7 격자가 주인공 */
+.map{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:20px}
+.map i{aspect-ratio:1;position:relative;display:grid;place-items:center;font-style:normal;font-family:var(--fig);font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--on-heat)}
+.map i.me{box-shadow:inset 0 0 0 3px var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:10px}
+.miss .val{color:var(--ember)}
+
+/* 시연 패널 (발표용, 앱 바깥) */
+.demo{width:260px;max-width:100%;font-size:14px;display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.demo h2{font-size:15px;font-weight:700}
+.demo .clock{font-family:var(--fig);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.demo input[type=range]{width:100%;accent-color:var(--ink);margin:0}
+.demo .ctrl{display:flex;gap:8px;flex-wrap:wrap}
+.demo .ctrl button{border:1px solid var(--ink);background:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600}
+.demo .ctrl button.primary{background:var(--btn);color:var(--on-btn)}
+.demo p{color:var(--mute);font-size:13px}
+@media (max-width:720px){.demo{width:390px}}
+@media (prefers-reduced-motion:no-preference){.cells i{transition:background-color .3s}}
