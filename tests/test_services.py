@@ -1,4 +1,8 @@
-"""백엔드 로직 테스트 (시연 모드, 임시 DB)."""
+"""백엔드 로직 테스트 (시연 모드, 임시 DB, 가상 라이더 민수).
+
+민수는 10시부터 35분마다 25분 배달 이동한다(가상). 그래서 11시에는 최근 2시간 이동이 80분에 못 미치고,
+14시에는 넘는다. 쉼이 20분을 넘으면 노출 누적이 0으로 돌아간다.
+"""
 import os
 import tempfile
 
@@ -19,32 +23,49 @@ def svc(monkeypatch):
 LAT, LON = 37.5552, 126.9222
 
 
-def test_now_in_payable_window(svc):
-    r = svc.now_status(LAT, LON, "15:00")
-    assert r["grid"] == [59, 126] and r["temp"] >= 35 and r["pay_now"] is True
+def test_now_eligible_after_two_hours_of_delivery(svc):
+    r = svc.now_status(LAT, LON, "14:00")
+    assert r["grid"] == [59, 126] and r["hot"] and r["pay_now"] is True
+    assert r["exposure_min"] >= r["exposure_need_min"] and r["usual_hourly"] == 14_600 and r["virtual_rider"]
 
 
-def test_now_before_window_not_payable(svc):
-    assert svc.now_status(LAT, LON, "11:00")["pay_now"] is False
+def test_now_not_enough_exposure_gives_reason(svc):
+    r = svc.now_status(LAT, LON, "11:00")
+    assert r["pay_now"] is False and any("배달 이동" in x for x in r["reasons"])
+
+
+def test_now_outside_usual_hours(svc):
+    r = svc.now_status(LAT, LON, "18:30")
+    assert r["pay_now"] is False and any("4주" in x for x in r["reasons"])
 
 
 def test_rest_flow_and_history(svc):
-    svc.rest_start(1, LAT, LON, "shelter", "14:00")
-    mid = svc.rest_current(1, "15:00")
-    assert mid["resting"] and mid["paid_min"] == 60
+    s = svc.rest_start(1, LAT, LON, "shelter", "14:00")
+    assert s["eligible"]
+    early = svc.rest_current(1, "14:15")
+    assert early["resting"] and early["paid_min"] == 0 and "20분" in early["reason"]
     with pytest.raises(svc.ServiceError):
-        svc.rest_start(1, LAT, LON, "shelter", "15:00")   # 이미 쉬는 중
-    done = svc.rest_stop(1, "16:00")
-    assert done["paid_min"] == 120 and done["amount"] == round(120 / 60 * 17210)
-    h = svc.history(1, "16:30")
-    assert h["today_paid_min"] == 120 and h["today_left_min"] == 120
+        svc.rest_start(1, LAT, LON, "shelter", "14:20")   # 이미 쉬는 중
+    done = svc.rest_stop(1, "14:55")
+    assert (done["rested_min"], done["paid_min"], done["amount"]) == (55, 30, 7_300)
+    h = svc.history(1, "15:00")
+    assert h["today_paid_rests"] == 1 and h["today_left_rests"] == 3 and h["today_amount"] == 7_300
     assert h["week"][-1]["today"] and h["week"][-1]["rested"]
 
 
-def test_daily_cap_across_rests(svc):
-    svc.rest_start(1, LAT, LON, "shelter", "14:00"); svc.rest_stop(1, "17:00")
-    svc.rest_start(1, LAT, LON, "shelter", "17:00"); r = svc.rest_stop(1, "18:00")
-    assert r["paid_min"] == 0   # 17시 이후는 35도 구간 보전 없음
+def test_rest_resets_exposure(svc):
+    svc.rest_start(1, LAT, LON, "shelter", "14:00"); svc.rest_stop(1, "14:40")
+    again = svc.rest_start(1, LAT, LON, "shelter", "14:40")
+    assert again["eligible"] is False
+    assert svc.rest_stop(1, "15:10")["amount"] == 0
+    assert svc.now_status(LAT, LON, "17:10")["pay_now"] is True   # 다시 2시간 배달하면 받을 수 있다
+
+
+def test_real_mode_does_not_judge(svc, monkeypatch):
+    from backend import config
+    monkeypatch.setattr(config, "DEMO_MODE", False)
+    j = svc._judge(1, 36.0, config.now("2026-08-03T14:00"))
+    assert j["pay_now"] is False and j["has_record"] is False and j["reasons"] == [svc.NO_RECORD]
 
 
 def test_shelters_sorted_and_virtual(svc):
@@ -57,6 +78,7 @@ def test_shelters_sorted_and_virtual(svc):
 def test_report_shape(svc):
     r = svc.report(LAT, LON, "15:30")
     assert len(r["grid"]) == 49 and sum(c["me"] for c in r["grid"]) == 1 and r["virtual"]
+    assert r["amount"] > 0 and r["paid_hours"] > 0
 
 
 def test_demo_reset(svc):
@@ -64,12 +86,9 @@ def test_demo_reset(svc):
     assert svc.demo_reset()["deleted"] == 1
 
 
-def test_now_guidance_fields(svc):
-    r = svc.now_status(LAT, LON, "15:00")
-    assert r["pay_until"] and r["pay_until"] > 15 and r["next_pay"] is None
-    assert r["shelter"]["inside"] is True          # 서교동 주민센터가 150m 안
-    early = svc.now_status(LAT, LON, "11:00")
-    assert early["pay_until"] is None and early["next_pay"] is not None and early["next_pay"] > 11
+def test_config_has_agreed_numbers(svc):
+    c = svc.app_config()
+    assert (c["heat_min"], c["exposure_need_min"], c["rest_min"], c["pay_cap_min"], c["daily_rests"]) == (33.0, 80, 20, 30, 4)
 
 
 def test_rest_start_auto_place(svc):

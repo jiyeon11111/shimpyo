@@ -18,15 +18,15 @@
       return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || "요청을 처리하지 못했어요."); return j; });
     });
   }
-  function payRange(now) {
-    var p = now.hours.filter(function (x) { return x.pay; }).map(function (x) { return x.h; });
+  function hotRange(now) {
+    var p = now.hours.filter(function (x) { return x.hot; }).map(function (x) { return x.h; });
     return p.length ? p[0] + "~" + (p[p.length - 1] + 1) + "시" : "없음";
   }
 
   function view(r, now) {
     var h = '<p class="eyebrow">' + esc(now.place) + ' 주변 5km 격자 49칸, 오늘 ' + r.time.slice(0, 10) + '</p>' +
-      '<h1 class="title">' + (r.missed_hours > 0 ? "오늘 보전 시간에 못 쉰 라이더 시간이 " + r.missed_hours + "시간이에요"
-        : now.pay_now ? "보전 시간이 시작됐어요. 아직 못 쉰 시간은 없어요" : "지금은 보전 시간이 아니에요") + '</h1>';
+      '<h1 class="title">' + (r.missed_hours > 0 ? "오늘 체감 33도 넘는 시간에 못 쉰 라이더 시간이 " + r.missed_hours + "시간이에요"
+        : now.hot ? "33도를 넘었어요. 아직 못 쉰 시간은 없어요" : "지금은 33도 아래예요") + '</h1>';
     h += '<div class="kpis">' +
       '<div><span>지금 쉬는 라이더</span><b class="fig">' + r.resting + '<small>명</small></b></div>' +
       '<div><span>오늘 보전 시간</span><b class="fig">' + r.paid_hours + '<small>시간</small></b></div>' +
@@ -34,15 +34,16 @@
       '<div class="warn"><span>못 쉰 위험 시간</span><b class="fig">' + r.missed_hours + '<small>시간</small></b></div></div>';
     h += '<div class="admin-body"><section class="hero admin-map" aria-label="격자별 체감온도">' +
       '<div class="hero-top"><span class="chip"><i style="background:' + heat(now.temp) + '"></i>기준 칸 ' + now.temp.toFixed(1) + '도, ' + esc(now.stage.name) + ' 단계</span>' +
-      '<span class="hero-time fig">보전 시간 ' + payRange(now) + '</span></div>' +
+      '<span class="hero-time fig">33도 이상 ' + hotRange(now) + '</span></div>' +
       '<div class="map">' + r.grid.map(function (c) {
         return '<i style="background:' + heat(c.temp) + '" class="' + (c.me ? "me" : "") + (c.temp < 31 ? " cool" : "") + '" title="격자 ' + c.nx + ',' + c.ny + ' ' + c.temp + '도">' + c.temp.toFixed(1) + '</i>';
       }).join("") + '</div>' +
-      '<div class="legend"><span><i style="background:var(--sun)"></i>33도 알림</span><span><i style="background:var(--amber)"></i>35도 14~17시 보전</span><span><i style="background:var(--ember)"></i>38도 이상 종일 보전</span><span>흰 테두리: ' + esc(now.place) + '</span></div>' +
+      '<div class="legend"><span><i style="background:var(--sun)"></i>33도 이상: 보전 기준</span><span><i style="background:var(--amber)"></i>35도 이상</span><span><i style="background:var(--ember)"></i>38도 이상</span><span>흰 테두리: ' + esc(now.place) + '</span></div>' +
       '</section>';
     h += '<div class="admin-side"><div class="sec"><h2>읽는 법</h2></div><ul class="read">' +
-      '<li><b>못 쉰 위험 시간</b>은 보전 기준을 넘은 시간에 쉼을 기록하지 않은 라이더 시간의 합이에요. 많은 곳부터 쉼터와 안내를 늘리면 돼요.</li>' +
-      '<li><b>오늘 지급 예정</b>은 보전 시간에 시급 ' + won(now.rate) + '을 곱한 값이에요. 라이더 한 명당 하루 4시간까지만 셉니다.</li>' +
+      '<li><b>못 쉰 위험 시간</b>은 체감 33도를 넘은 시간에 쉼을 기록하지 않은 라이더 시간의 합이에요. 많은 곳부터 쉼터와 안내를 늘리면 돼요.</li>' +
+      '<li><b>오늘 지급 예정</b>은 라이더마다 평소 그 시간대 수입에 쉰 분을 비례한 값이에요. 20분 넘게 쉰 경우만, 한 번에 30분치·하루 4번까지 셉니다.</li>' +
+      '<li>보전 대상은 최근 4주 그 시간대에 일했고, 최근 2시간 배달 이동이 80분 이상인 라이더예요. 가상 라이더는 이 조건을 채웠다고 가정했어요.</li>' +
       '<li>판정은 쉼을 시작한 격자로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul>';
     return h + '<p class="note">' + (r.virtual ? "가상 라이더 " + r.virtual_riders + "명과 시연용 기상값으로 계산한 값이에요. 근거로 인용하지 마세요." : "실제 쉼 기록만 집계했어요.") + '</p></div></div>';
   }

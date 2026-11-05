@@ -36,39 +36,41 @@
   };
   function ic(n, cls) { return '<svg class="ic ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>'; }
 
-  // 하루 체감온도 막대: 레퍼런스의 사진 자리. 한 칸이 한 시간, 높이와 색이 체감온도, 밑줄이 돈 받는 시간.
+  // 하루 체감온도 막대: 레퍼런스의 사진 자리. 한 칸이 한 시간, 높이와 색이 체감온도, 밑줄이 33도 넘는 시간.
   function bars(now, cur) {
     var nowH = +now.time.slice(11, 13), from = cur && cur.resting ? +cur.start.slice(11, 13) : null;
     var lo = 26, hi = 40;
     return '<div class="bars" aria-label="오늘 시간대별 체감온도">' + now.hours.map(function (x) {
       var hgt = Math.max(8, Math.min(100, (x.temp - lo) / (hi - lo) * 100));
       var cls = (x.h === nowH ? " now" : "") + (x.h > nowH ? " later" : "") + (from !== null && x.h >= from && x.h <= nowH ? " rest" : "");
-      return '<div class="bar' + cls + '" title="' + x.h + '시 ' + x.temp + '도"><i style="height:' + hgt + '%;background:' + heat(x.temp) + '"></i><b class="' + (x.pay ? "pay" : "") + '"></b></div>';
+      return '<div class="bar' + cls + '" title="' + x.h + '시 ' + x.temp + '도"><i style="height:' + hgt + '%;background:' + heat(x.temp) + '"></i><b class="' + (x.hot ? "pay" : "") + '"></b></div>';
     }).join("") + '</div><div class="bars-axis fig"><span>6시</span><span>12</span><span>18</span><span>22시</span></div>';
   }
-  function payRange(now) {
-    var p = now.hours.filter(function (x) { return x.pay; }).map(function (x) { return x.h; });
+  function hotRange(now) {
+    var p = now.hours.filter(function (x) { return x.hot; }).map(function (x) { return x.h; });
     return p.length ? p[0] + "~" + (p[p.length - 1] + 1) + "시" : null;
   }
+  function rules() { var c = S.cfg || {}; return { heat: c.heat_min || 33, need: c.exposure_need_min || 80, rest: c.rest_min || 20, cap: c.pay_cap_min || 30, times: c.daily_rests || 4 }; }
 
   // ---------- 시작 ----------
   function vSplash() {
+    var R = rules();
     return '<div class="splash"><canvas id="bigLogo" width="280" height="340" aria-label="쉼표 로고"></canvas>' +
       '<h1>쉼표</h1><p class="lead">폭염 시간에 쉬어도<br>소득이 줄지 않게.</p>' +
       '<ol class="how">' +
-      '<li><b>더울 때 쉬기 시작을 눌러요</b><span>체감온도 35도 넘는 14~17시, 38도 넘으면 언제든</span></li>' +
-      '<li><b>다 쉬면 끝내기를 눌러요</b><span>쉼터 근처면 바로 인정돼요</span></li>' +
-      '<li><b>쉰 만큼 돈이 쌓여요</b><span>1시간에 ' + won(S.cfg ? S.cfg.rate : 17210) + ', 하루 최대 4시간</span></li></ol>' +
+      '<li><b>더운데 배달 중이면 쉬기 시작을 눌러요</b><span>체감온도 ' + R.heat + '도 이상, 최근 2시간 배달 이동 ' + R.need + '분 이상, 평소 일하던 시간이면 돼요</span></li>' +
+      '<li><b>' + R.rest + '분 넘게 쉬고 끝내기를 눌러요</b><span>쉬는 동안 콜이 꺼져요</span></li>' +
+      '<li><b>평소 이 시간에 벌던 만큼 쌓여요</b><span>한 번에 ' + R.cap + '분치까지, 하루 ' + R.times + '번까지</span></li></ol>' +
       '<div class="foot"><button class="pillbtn dark full" id="goBtn">시작하기</button>' +
       '<span class="note center">위치로 체감온도를 확인해요. 위치는 쉼을 기록할 때만 저장해요.</span></div></div>';
   }
 
   // ---------- 지금 (홈) ----------
   function verdict(now, hist) {
-    if (hist.today_left_min <= 0) return { h: "오늘 받을 만큼 다 받았어요", s: "하루 최대 4시간이에요. 그래도 더우면 꼭 쉬세요." };
-    if (now.pay_now) return { h: "지금 쉬면 돈을 받아요", s: now.pay_until + "시까지 쉰 만큼 쌓여요" };
-    if (now.next_pay) return { h: "아직은 적립 시간이 아니에요", s: now.next_pay + "시부터 쉬면 돈을 받아요" };
-    return { h: "오늘 적립 시간이 끝났어요", s: "내일도 더우면 알려드릴게요" };
+    var R = rules();
+    if (hist.today_left_rests <= 0) return { h: "오늘 받을 만큼 다 받았어요", s: "하루 " + R.times + "번까지예요. 그래도 더우면 꼭 쉬세요." };
+    if (now.pay_now) return { h: "지금 쉬면 돈을 받아요", s: R.rest + "분 넘게 쉬면 평소 이 시간 수입만큼 쌓여요" };
+    return { h: "지금 쉬면 돈은 안 나와요", s: now.reasons[0] || "" };
   }
 
   function shelterRow(s, link) {
@@ -81,7 +83,10 @@
   }
 
   function vHome(now, cur, hist, near) {
-    var v = verdict(now, hist), payNow = now.pay_now && hist.today_left_min > 0, range = payRange(now);
+    var v = verdict(now, hist), payNow = now.pay_now && hist.today_left_rests > 0, R = rules();
+    var foot = now.has_record
+      ? '<b>배달 이동 ' + now.exposure_min + '분 / ' + R.need + '분</b><span>' + (now.usual_hourly ? "평소 이 시간 시간당 " + won(now.usual_hourly) : "평소 이 시간엔 일하지 않았어요") + '</span>'
+      : '<b>운행 기록 연결 전</b><span>' + (hotRange(now) ? hotRange(now) + " " + R.heat + "도 이상" : "오늘 " + R.heat + "도 넘는 시간 없음") + '</span>';
     var h = '<header class="brand"><span class="word"><canvas id="miniLogo" width="56" height="68" aria-hidden="true"></canvas>쉼표</span>' +
       '<span class="loc">' + ic("pin") + now.place + '</span></header>';
     if (S.banner) h += '<div class="banner" role="alert">' + S.banner + '</div>';
@@ -90,24 +95,28 @@
       '<div class="hero-top"><span class="chip"><i style="background:' + heat(now.temp) + '"></i>' + now.stage.name + ' 단계</span><span class="hero-time fig">' + now.time.slice(11) + '</span></div>' +
       '<div class="hero-temp fig">' + now.temp.toFixed(1) + '<sup>°</sup><small>체감온도</small></div>' +
       bars(now, null) +
-      '<div class="hero-foot"><div><b>' + (range ? range + " 적립" : "오늘 적립 없음") + '</b><span>시간당 ' + won(now.rate) + '</span></div>' +
+      '<div class="hero-foot"><div>' + foot + '</div>' +
       '<button class="pillbtn ' + (payNow ? "amber" : "ghost") + '" id="startBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "시작하는 중" : payNow ? "쉬기 시작" : "그래도 쉬기") + '</button></div>' +
       '</section>';
-    if (!payNow) h += '<p class="note">지금 쉬면 기록만 남고 돈은 쌓이지 않아요.</p>';
+    if (!payNow) h += '<p class="note">지금 쉬면 기록만 남고 돈은 쌓이지 않아요.' + (now.reasons.length > 1 ? " " + now.reasons.slice(1).map(esc).join(". ") + "." : "") + '</p>';
+    if (now.virtual_rider) h += '<p class="note">운행 기록과 평소 수입은 시연용 가상 라이더 값이에요.</p>';
     h += '<div class="sec"><h2>가까운 쉼터</h2><button class="more" data-go="shelter">전체 보기</button></div>' +
       '<div class="list">' + near.items.slice(0, 2).map(function (s) { return shelterRow(s, false); }).join("") + '</div>';
-    h += '<div class="today"><span>오늘 받은 돈</span><b class="fig">' + won(hist.today_paid_min / 60 * now.rate) + '</b></div>';
+    h += '<div class="today"><span>오늘 받은 돈</span><b class="fig">' + won(hist.today_amount) + '</b></div>';
     return h;
   }
 
   // ---------- 쉬는 중 (몰입 화면) ----------
   function vResting(now, cur, hist) {
-    var capH = S.cfg.daily_cap_min / 60, used = hist.today_paid_min + cur.paid_min, left = Math.max(0, S.cfg.daily_cap_min - used);
-    var inHour = cur.paid_min % 60, frac = left <= 0 ? 1 : inHour / 60, R = 92, C = 2 * Math.PI * R;
-    var msg = left <= 0 ? "오늘 한도를 다 채웠어요. 이제 끝내도 돼요."
-      : now.pay_now ? (60 - inHour) + "분 더 쉬면 " + won(now.rate) + " 더 쌓여요"
-      : "지금은 적립 시간이 아니에요. 끝내도 손해 없어요.";
-    var segs = ""; for (var i = 0; i < capH; i++) segs += '<i class="' + (used >= (i + 1) * 60 ? "full" : used > i * 60 ? "part" : "") + '"></i>';
+    var Q = rules(), times = Q.times, done = hist.today_paid_rests, counting = cur.eligible && done < times;
+    var frac = counting ? Math.min(cur.rested_min, Q.cap) / Q.cap : 0, R = 92, C = 2 * Math.PI * R;
+    var msg = !cur.eligible ? "이번 쉼은 적립 대상이 아니에요. " + esc(cur.reason || "") + ". 그래도 더우면 쉬어 가세요."
+      : done >= times ? "오늘 " + times + "번을 다 받았어요. 이제 끝내도 돼요."
+      : cur.rested_min < Q.rest ? (Q.rest - cur.rested_min) + "분 더 쉬면 적립돼요"
+      : cur.rested_min < Q.cap ? (Q.cap - cur.rested_min) + "분 더 쉬면 " + won(Q.cap / 60 * cur.usual_hourly) + "까지 쌓여요"
+      : "이번 쉼은 최대치를 채웠어요. 끝내도 돼요.";
+    var used = done + (cur.paid_min > 0 ? 1 : 0);
+    var segs = ""; for (var i = 0; i < times; i++) segs += '<i class="' + (i < done ? "full" : i < used ? "part" : "") + '"></i>';
     return '<div class="immersive">' +
       '<header class="ibar"><span></span><h1>쉬는 중</h1><span></span></header>' +
       '<div class="ichip">' + cur.start.slice(11) + '부터, ' + (cur.place === "shelter" ? "쉼터에서 확인됨" : "자리 확인 중") + '</div>' +
@@ -118,7 +127,7 @@
       '<div class="ibars">' + bars(now, cur) + '</div>' +
       '<section class="sheet"><i class="grab"></i>' +
       '<p class="sheet-k">다음 적립</p><p class="sheet-v">' + msg + '</p>' +
-      '<div class="segs">' + segs + '</div><p class="sheet-s fig">오늘 ' + Math.floor(used / 60) + '시간 ' + (used % 60) + '분 / ' + capH + '시간</p>' +
+      '<div class="segs">' + segs + '</div><p class="sheet-s fig">오늘 ' + used + '번 / ' + times + '번</p>' +
       '<button class="pillbtn light full" id="stopBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "끝내는 중" : "다 쉬었어요, 끝내기") + '</button>' +
       (S.cfg.demo ? '<p class="sheet-s center">시연 패널에서 시간을 옮겨 보세요</p>' : '<p class="sheet-s center">앱을 닫아도 계속 기록돼요</p>') +
       '</section></div>';
@@ -136,8 +145,8 @@
       '<p class="done-sub fig">' + d.start.slice(11) + ' ~ ' + d.end.slice(11) + ', ' + now.place + '</p>' +
       '<div class="trio"><div><b class="fig">' + d.rested_min + '<small>분</small></b><span>쉰 시간</span></div>' +
       '<div><b class="fig">' + peak.toFixed(1) + '<small>°</small></b><span>최고 체감온도</span></div>' +
-      '<div><b class="fig">' + hist.today_left_min + '<small>분</small></b><span>오늘 남은 한도</span></div></div>' +
-      (paid ? '' : '<p class="done-note">적립 시간이 아니어서 이번엔 돈이 쌓이지 않았어요.</p>') +
+      '<div><b class="fig">' + hist.today_left_rests + '<small>번</small></b><span>오늘 남은 횟수</span></div></div>' +
+      (paid ? '' : '<p class="done-note">이번엔 돈이 쌓이지 않았어요. ' + esc(d.reason || "") + '.</p>') +
       '<p class="done-k">이번 주 쉰 날</p><div class="weekdots">' + hist.week.map(function (w) {
         var dd = new Date(w.date + "T00:00");
         return '<div class="' + (w.today ? "t" : "") + '"><i class="' + (w.rested ? "y" : "") + '">' + (w.rested ? ic("check") : "") + '</i>' + DOW[dd.getDay()] + '</div>';
@@ -161,7 +170,7 @@
       '<section class="hero slim"><div class="hero-temp fig">' + won(hist.month.amount) + '</div>' +
       '<div class="trio in"><div><b class="fig">' + hist.month.count + '<small>번</small></b><span>쉰 횟수</span></div>' +
       '<div><b class="fig">' + hist.month.paid_min + '<small>분</small></b><span>적립 시간</span></div>' +
-      '<div><b class="fig">' + Math.max(0, S.cfg.monthly_cap_min - hist.month.paid_min) + '<small>분</small></b><span>이달 남은 한도</span></div></div></section>' +
+      '<div><b class="fig">' + hist.today_left_rests + '<small>번</small></b><span>오늘 남은 횟수</span></div></div></section>' +
       '<div class="sec"><h2>최근 7일</h2></div><div class="weekdots light">' + hist.week.map(function (w) {
         var d = new Date(w.date + "T00:00");
         return '<div class="' + (w.today ? "t" : "") + '"><i class="' + (w.rested ? "y" : "") + '">' + (w.rested ? ic("check") : d.getDate()) + '</i>' + DOW[d.getDay()] + '</div>';
@@ -170,7 +179,7 @@
     if (!hist.today.length) h += '<p class="empty">아직 쉰 기록이 없어요. 지금 탭에서 쉬기 시작을 눌러 보세요.</p>';
     else h += '<div class="list">' + hist.today.map(function (r) {
       return '<div class="item static"><span class="thumb ' + (r.paid_min ? "paid" : "") + '">' + ic(r.paid_min ? "check" : "close") + '</span>' +
-        '<span class="txt"><span class="name fig">' + r.start.slice(11) + ' ~ ' + r.end.slice(11) + '</span><span class="sub">' + (r.place === "shelter" ? "쉼터" : "그 밖의 곳") + ', ' + (r.paid_min ? r.paid_min + "분 적립" : "적립 시간 아님") + '</span></span>' +
+        '<span class="txt"><span class="name fig">' + r.start.slice(11) + ' ~ ' + r.end.slice(11) + '</span><span class="sub">' + (r.place === "shelter" ? "쉼터" : "그 밖의 곳") + ', ' + (r.paid_min ? r.paid_min + "분치 적립" : "적립 안 됨") + '</span></span>' +
         '<b class="amt fig">' + won(r.amount) + '</b></div>';
     }).join("") + '</div>';
     return h + (hist.has_virtual ? '<p class="note">이번 달 합계에는 시연용 가상 기록이 들어 있어요.</p>' : '');

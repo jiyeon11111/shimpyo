@@ -14,7 +14,7 @@ import pandas as pd
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from engine.heat import apparent_temp_array  # noqa: E402
-from engine.rules import RULES  # noqa: E402
+from engine.rules import HEAT_MIN_C  # noqa: E402
 
 RAW = os.path.join(ROOT, "data", "raw")
 SAMPLE = os.path.join(ROOT, "data", "sample")
@@ -80,19 +80,13 @@ def asos_hourly() -> pd.DataFrame:
     return df.merge(st, on="stn", how="left")
 
 
-def payable(df: pd.DataFrame, rules: list[dict] = RULES) -> pd.Series:
-    """시간 자료 한 줄마다 엔진 판정 규칙(RULES)으로 보전 구간인지 표시.
+def hot_hours(df: pd.DataFrame) -> pd.Series:
+    """시간 자료 한 줄마다 체감온도 기준(33도 이상, engine.rules.is_hot과 같음)을 넘었는지 표시.
 
-    engine.rules.judge_hour와 같은 규칙을 배열에 적용한다: 위에서부터 처음 맞는 규칙 하나만 쓴다.
+    지급 가능한 시간의 상한일 뿐이다. 실제 지급은 라이더의 자격(평소 근무)·노출(배달 이동 N분)·
+    쉼(20분 이상)을 함께 봐야 하므로 기상 자료만으로는 지급 시간을 셀 수 없다.
     """
-    at, hour = df["at"].to_numpy(), df["time"].dt.hour.to_numpy()
-    decided = np.zeros(len(df), dtype=bool)
-    pay = np.zeros(len(df), dtype=bool)
-    for r in rules:
-        hit = ~decided & (at >= r["min_temp"]) & np.isin(hour, list(r["hours"]))
-        pay[hit] = r["pay"]
-        decided |= hit
-    return pd.Series(pay, index=df.index)
+    return pd.Series(df["at"].to_numpy() >= HEAT_MIN_C, index=df.index)
 
 
 def title(text: str, kinds: list[str]) -> str:
