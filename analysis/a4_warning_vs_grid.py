@@ -3,7 +3,8 @@
 # 질문: 특보 기준(제주 방식: 오후 1시 이전 폭염경보 발효 시 보전)이었다면 놓치는 위험 시간은 얼마인가?
 # 데이터: D01·D02 ASOS, D05 폭염특보 이력
 # 방법: 같은 시간자료에 두 기준을 적용한다.
-#   - 쉼표 기준: engine/rules.py 판정 (체감온도 35도 이상 14~17시, 38도 이상 전 시간)
+#   - 쉼표 기준: engine/rules.py의 체감온도 기준 (33도 이상, 시간대 제한 없음).
+#     자격·노출 조건은 라이더 자료가 있어야 해서 여기서는 기온 조건만 비교한다.
 #   - 특보 기준: 그 시도에 폭염경보 이상이 오후 1시 이전 발효된 날의 14~17시
 #   쉼표 기준으로는 위험한데 특보 기준으로는 보전받지 못하는 시간을 '보장 공백'으로 센다.
 # 결과: outputs/a4_gap.png, outputs/a4_gap.csv
@@ -11,12 +12,12 @@
 # %%
 import pandas as pd
 
-from common import OUT, HEAT, INK, asos_hourly, load, payable, setup_plot, title
+from common import OUT, HEAT, INK, asos_hourly, hot_hours, load, setup_plot, title
 
 plt = setup_plot()
 
 h = asos_hourly()
-h["ours"] = payable(h)
+h["ours"] = hot_hours(h)
 h["date"] = h["time"].dt.date
 
 w = load("warnings", "heat_warnings.csv")

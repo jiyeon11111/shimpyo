@@ -1,21 +1,29 @@
-"""엔진 동작 확인용 예시. 가상의 폭염일 하루, 라이더 세 명."""
-from engine import RiderDay, apparent_temp_summer, settle_day
+"""엔진 동작 확인용 예시. 가상의 폭염일 14시, 라이더 세 명이 쉬기 시작한다. 모두 지어낸 값."""
+from datetime import datetime, timedelta
 
-# 가상의 한 격자 시간별 기온(섭씨)과 습도(%)
-weather = {11: (32.5, 62), 12: (33.4, 60), 13: (34.2, 58), 14: (35.0, 57),
-           15: (35.6, 55), 16: (35.1, 56), 17: (34.0, 58), 18: (32.6, 62)}
-temps = {h: apparent_temp_summer(ta, rh) for h, (ta, rh) in weather.items()}
+from engine import apparent_temp_summer, judge_start, settle_rest
 
-print("시각  기온  습도  체감온도")
-for h, (ta, rh) in weather.items():
-    print(f"{h:>3}시  {ta:4.1f}  {rh:3d}%   {temps[h]:4.1f}")
+at = datetime(2026, 8, 3, 14, 0)
+temp = apparent_temp_summer(35.6, 55)     # 가상 기온 35.6도, 습도 55%
+print(f"14시 체감온도 {temp:.1f}도\n")
+
+
+def moves(minutes_each, gap):
+    """12시부터 14시까지 minutes_each분 이동, gap분 대기를 반복."""
+    out, t = [], at - timedelta(hours=2)
+    while t < at:
+        out.append((t, t + timedelta(minutes=minutes_each)))
+        t += timedelta(minutes=minutes_each + gap)
+    return out
+
 
 riders = [
-    RiderDay("A", "2026-08-03", (60, 127), worked_today=True),                    # 폭염 시간에 쉼
-    RiderDay("B", "2026-08-03", (60, 127), worked_today=True, busy_hours={14, 15}),  # 일부 시간 배달
-    RiderDay("C", "2026-08-03", (60, 127), worked_today=False),                   # 운행 기록 없음
+    ("A 평소 이 시간 배달, 꾸준히 이동", True, moves(25, 10), 25, 15_200),
+    ("B 카페에서 25분씩 대기", True, moves(15, 25), 25, 15_200),   # 20분 넘는 공백으로 노출이 계속 리셋
+    ("C 평소엔 오전만 일함", False, moves(25, 10), 25, 0),
+    ("D 15분만 쉼", True, moves(25, 10), 15, 15_200),
 ]
-print()
-for rd in riders:
-    r = settle_day(rd, temps)
-    print(f"라이더 {r.rider_id}: 보전 시각 {r.paid_hours or '-'}, 금액 {r.amount:,}원")
+for name, worked, mv, rest_min, usual in riders:
+    d = judge_start(temp, worked, mv, at)
+    r = settle_rest(at, at + timedelta(minutes=rest_min), d.pay_eligible, usual, 0, d.reasons[0] if d.reasons else None)
+    print(f"{name}: 노출 {d.exposure_min}분, {rest_min}분 쉼 → {r.amount:,}원" + (f" ({r.reason})" if r.reason else ""))

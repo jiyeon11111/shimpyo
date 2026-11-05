@@ -24,10 +24,15 @@ CREATE TABLE IF NOT EXISTS rests (
   nx INTEGER NOT NULL, ny INTEGER NOT NULL,   -- 판정 기준: 쉼을 시작한 위치의 격자
   sido TEXT, sgg TEXT, emd TEXT,              -- 집계 기준: 쉼을 시작한 위치의 행정구역
   rested_min INTEGER, paid_min INTEGER, amount INTEGER,
-  virtual INTEGER NOT NULL DEFAULT 0          -- 시연용 가상 기록이면 1
+  virtual INTEGER NOT NULL DEFAULT 0,         -- 시연용 가상 기록이면 1
+  -- 쉼을 시작할 때의 판정 근거 (나중에 정산·감사용)
+  eligible INTEGER NOT NULL DEFAULT 0, reason TEXT,
+  temp REAL, exposure_min INTEGER, usual_hourly INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_rests_rider_start ON rests(rider_id, start);
 """
+# 이전 버전 DB 파일에 새 열 추가
+_NEW_COLS = ["eligible INTEGER NOT NULL DEFAULT 0", "reason TEXT", "temp REAL", "exposure_min INTEGER", "usual_hourly INTEGER"]
 
 
 @contextmanager
@@ -44,13 +49,18 @@ def conn():
 def init():
     with conn() as c:
         c.executescript(SCHEMA)
+        have = {r[1] for r in c.execute("PRAGMA table_info(rests)")}
+        for col in _NEW_COLS:
+            if col.split()[0] not in have:
+                c.execute(f"ALTER TABLE rests ADD COLUMN {col}")
         if not c.execute("SELECT 1 FROM riders").fetchone():
             c.execute("INSERT INTO riders (id, name, home_sido) VALUES (1, '민수', '서울')")
         if config.DEMO_MODE and not c.execute("SELECT 1 FROM rests WHERE virtual = 1").fetchone():
-            # 시연용: 지난주 쉼 기록 몇 건 (가상)
-            past = [("2026-07-28T14:10", "2026-07-28T15:20", 70), ("2026-07-30T14:30", "2026-07-30T16:00", 90),
-                    ("2026-07-31T15:00", "2026-07-31T16:20", 80), ("2026-08-02T14:00", "2026-08-02T15:00", 60)]
-            for s, e, m in past:
+            # 시연용: 지난주 쉼 기록 몇 건 (가상). 합의안 정산: 한 번에 최대 30분치 × 평소 시간당 수입
+            past = [("2026-07-28T14:10", "2026-07-28T14:40", 30, 14_600), ("2026-07-30T13:30", "2026-07-30T13:55", 25, 18_900),
+                    ("2026-07-31T15:00", "2026-07-31T15:40", 40, 13_900), ("2026-08-02T16:00", "2026-08-02T16:30", 30, 15_200)]
+            for s, e, m, w in past:
+                paid = min(m, 30)
                 c.execute("""INSERT INTO rests (rider_id, start, end, place, verified, nx, ny, sido, sgg, emd,
-                             rested_min, paid_min, amount, virtual) VALUES (1, ?, ?, 'shelter', 1, 59, 126,
-                             '서울특별시', '마포구', '서교동', ?, ?, ?, 1)""", (s, e, m, m, round(m / 60 * 17210)))
+                             rested_min, paid_min, amount, virtual, eligible, usual_hourly) VALUES (1, ?, ?, 'shelter', 1, 59, 126,
+                             '서울특별시', '마포구', '서교동', ?, ?, ?, 1, 1, ?)""", (s, e, m, paid, round(paid / 60 * w), w))
