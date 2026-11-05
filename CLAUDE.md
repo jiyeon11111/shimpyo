@@ -27,7 +27,7 @@ python -m pytest -q                              # 테스트 28개
 
 VS Code 실행 설정은 `.vscode/launch.json`에 있다. 환경변수는 `.env.example`을 참고한다(`.env`는 config.py가 직접 읽음).
 
-**주의:** 이전 작업 환경에서는 PyPI가 막혀 있었다. 그래서 FastAPI 경로(`backend/main.py`)는 실제로 실행해 본 적이 없고 문법 검사만 했다. 화면 흐름은 `serve_stdlib`로만 검증했다. **처음 할 일은 uvicorn으로 띄워서 화면 전체 흐름이 되는지 확인하는 것이다.**
+**주의:** uvicorn으로 띄워서 화면이 부르는 API 전체가 200으로 나오는 것까지 확인했다(fastapi 0.162, pydantic 2.13). 브라우저로 화면을 직접 눌러보지는 않았다.
 
 ## 구조와 원칙
 
