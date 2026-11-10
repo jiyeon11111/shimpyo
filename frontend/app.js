@@ -1,7 +1,7 @@
 /* 쉼표 앱. 화면마다 백엔드 API를 부른다.
    흐름: 지금(홈) → 쉬는 중(몰입 화면, 탭 숨김) → 적립 완료(몰입 화면) → 내역.
    지역 현황은 라이더 화면이 아니라서 admin.html(지자체·보험사용)로 뺐다.
-   시연 모드에서는 모든 요청에 at=HH:MM(시연 시각)을 붙이고 위치는 서교동으로 고정한다. */
+   시연 모드에서는 모든 요청에 at=HH:MM(시연 시각)을 붙이고 위치는 관악구청(청룡동)으로 고정한다. */
 (function () {
   "use strict";
   var S = { cfg: null, view: "splash", min: 840, filter: "near", done: null, banner: null, lat: null, lon: null, busy: false };
@@ -25,7 +25,7 @@
     });
   }
   function pos() { return { lat: S.lat, lon: S.lon }; }
-  function heat(t) { return t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : t >= 33 ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
+  function heat(t) { return t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : t >= 32 ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
   var DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
   var ICON = {
@@ -36,7 +36,7 @@
   };
   function ic(n, cls) { return '<svg class="ic ' + (cls || "") + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[n] + '</svg>'; }
 
-  // 하루 체감온도 막대: 레퍼런스의 사진 자리. 한 칸이 한 시간, 높이와 색이 체감온도, 밑줄이 33도 넘는 시간.
+  // 하루 체감온도 막대: 레퍼런스의 사진 자리. 한 칸이 한 시간, 높이와 색이 체감온도, 밑줄이 기준(32도, 모델 값) 넘는 시간.
   function bars(now, cur) {
     var nowH = +now.time.slice(11, 13), from = cur && cur.resting ? +cur.start.slice(11, 13) : null;
     var lo = 26, hi = 40;
@@ -50,7 +50,7 @@
     var p = now.hours.filter(function (x) { return x.hot; }).map(function (x) { return x.h; });
     return p.length ? p[0] + "~" + (p[p.length - 1] + 1) + "시" : null;
   }
-  function rules() { var c = S.cfg || {}; return { heat: c.heat_min || 33, need: c.exposure_need_min || 80, rest: c.rest_min || 20, cap: c.pay_cap_min || 30, times: c.daily_rests || 4 }; }
+  function rules() { var c = S.cfg || {}; return { heat: c.heat_min || 32, need: c.exposure_need_min || 60, rest: c.rest_min || 20, cap: c.pay_cap_min || 30, capWon: c.pay_cap_won || 10000, labor: c.labor_need_days || 12, times: c.daily_rests || 4 }; }
 
   // ---------- 시작 ----------
   function vSplash() {
@@ -58,9 +58,9 @@
     return '<div class="splash"><canvas id="bigLogo" width="280" height="340" aria-label="쉼표 로고"></canvas>' +
       '<h1>쉼표</h1><p class="lead">폭염 시간에 쉬어도<br>소득이 줄지 않게.</p>' +
       '<ol class="how">' +
-      '<li><b>더운데 배달 중이면 쉬기 시작을 눌러요</b><span>체감온도 ' + R.heat + '도 이상, 최근 2시간 배달 이동 ' + R.need + '분 이상, 평소 일하던 시간이면 돼요</span></li>' +
+      '<li><b>더운데 배달 중이면 쉬기 시작을 눌러요</b><span>달린 동 체감온도 ' + R.heat + '도 이상, 최근 2시간 배달 이동 ' + R.need + '분 이상, 이 시간대에 최근 4주 중 ' + R.labor + '일 이상 일했으면 돼요</span></li>' +
       '<li><b>' + R.rest + '분 넘게 쉬고 끝내기를 눌러요</b><span>쉬는 동안 콜이 꺼져요</span></li>' +
-      '<li><b>평소 이 시간에 벌던 만큼 쌓여요</b><span>한 번에 ' + R.cap + '분치까지, 하루 ' + R.times + '번까지</span></li></ol>' +
+      '<li><b>평소 이 시간에 벌던 만큼 쌓여요</b><span>한 번에 ' + R.cap + '분치(최대 ' + won(R.capWon) + ')까지, 하루 ' + R.times + '번까지</span></li></ol>' +
       '<div class="foot"><button class="pillbtn dark full" id="goBtn">시작하기</button>' +
       '<span class="note center">위치로 체감온도를 확인해요. 위치는 쉼을 기록할 때만 저장해요.</span></div></div>';
   }
@@ -99,7 +99,9 @@
       '<button class="pillbtn ' + (payNow ? "amber" : "ghost") + '" id="startBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "시작하는 중" : payNow ? "쉬기 시작" : "그래도 쉬기") + '</button></div>' +
       '</section>';
     if (!payNow) h += '<p class="note">지금 쉬면 기록만 남고 돈은 쌓이지 않아요.' + (now.reasons.length > 1 ? " " + now.reasons.slice(1).map(esc).join(". ") + "." : "") + '</p>';
+    if (now.judge_dong) h += '<p class="note">체감온도는 최근 1시간 가장 오래 달린 ' + esc(now.judge_dong.name) + ' 값이에요(행정동 모델).</p>';
     if (now.virtual_rider) h += '<p class="note">운행 기록과 평소 수입은 시연용 가상 라이더 값이에요.</p>';
+    h += '<p class="note src">자료: 체감온도는 쉼표 행정동 모델(기상청 AWS·ASOS 관측과 서울시 S-DoT 센서로 학습), 동 경계는 통계청 기반 행정동 경계, 판정 기준은 팀 확정안(2026.11.9)이에요.</p>';
     h += '<div class="sec"><h2>가까운 쉼터</h2><button class="more" data-go="shelter">전체 보기</button></div>' +
       '<div class="list">' + near.items.slice(0, 2).map(function (s) { return shelterRow(s, false); }).join("") + '</div>';
     h += '<div class="today"><span>오늘 받은 돈</span><b class="fig">' + won(hist.today_amount) + '</b></div>';
@@ -113,7 +115,7 @@
     var msg = !cur.eligible ? "이번 쉼은 적립 대상이 아니에요. " + esc(cur.reason || "") + ". 그래도 더우면 쉬어 가세요."
       : done >= times ? "오늘 " + times + "번을 다 받았어요. 이제 끝내도 돼요."
       : cur.rested_min < Q.rest ? (Q.rest - cur.rested_min) + "분 더 쉬면 적립돼요"
-      : cur.rested_min < Q.cap ? (Q.cap - cur.rested_min) + "분 더 쉬면 " + won(Q.cap / 60 * cur.usual_hourly) + "까지 쌓여요"
+      : cur.rested_min < Q.cap ? (Q.cap - cur.rested_min) + "분 더 쉬면 " + won(Math.min(Q.cap / 60 * cur.usual_hourly, Q.capWon)) + "까지 쌓여요"
       : "이번 쉼은 최대치를 채웠어요. 끝내도 돼요.";
     var used = done + (cur.paid_min > 0 ? 1 : 0);
     var segs = ""; for (var i = 0; i < times; i++) segs += '<i class="' + (i < done ? "full" : i < used ? "part" : "") + '"></i>';
@@ -160,7 +162,7 @@
       '<div class="chips" role="group" aria-label="쉼터 종류"><button id="f-near" aria-pressed="' + (S.filter === "near") + '">전체</button><button id="f-rider" aria-pressed="' + (S.filter === "rider") + '">이동노동자 쉼터</button></div>' +
       (list.items.length ? '<div class="list">' + list.items.map(function (s) { return shelterRow(s, true); }).join("") + '</div>'
         : '<p class="empty">반경 안에 등록된 쉼터가 없어요. 아무 데서나 쉬기 시작해도 자리 확인 뒤 인정돼요.</p>') +
-      '<p class="note">쉼터 150m 안에서 쉬기 시작하면 바로 인정돼요.' + (list.virtual ? " 지금 목록은 시연용 예시예요." : "") + '</p>';
+      '<p class="note">쉼터 150m 안에서 쉬기 시작하면 바로 인정돼요.' + (list.virtual ? " 지금 목록은 시연용 예시예요. 실제 운영 때는 서울 열린데이터광장 무더위쉼터 목록을 써요." : " 자료: 서울 열린데이터광장 무더위쉼터.") + '</p>';
   }
 
   // ---------- 내역 ----------
@@ -266,7 +268,7 @@
       render();
     } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function (g) { S.lat = g.coords.latitude; S.lon = g.coords.longitude; render(); },
-        function () { S.banner = "<b>위치를 못 받았어요.</b> 서교동 기준으로 보여드려요. 브라우저에서 위치 권한을 켜 주세요."; render(); }, { timeout: 8000 });
+        function () { S.banner = "<b>위치를 못 받았어요.</b> 관악구청 기준으로 보여드려요. 브라우저에서 위치 권한을 켜 주세요."; render(); }, { timeout: 8000 });
       render();
     } else render();
   }).catch(function () { screen.innerHTML = '<div class="banner" role="alert">서버에 연결되지 않아요. 터미널에서 백엔드를 실행했는지 확인하세요.</div>'; });

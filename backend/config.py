@@ -18,7 +18,7 @@ if os.path.exists(_env):
 DEMO_MODE = os.getenv("SHIMPYO_DEMO", "1") == "1"
 DEMO_DATE = os.getenv("SHIMPYO_DEMO_DATE", "2026-08-03")
 DEMO_START = os.getenv("SHIMPYO_DEMO_START", "14:00")
-DEMO_LAT, DEMO_LON = 37.5552, 126.9222          # 마포구 서교동
+DEMO_LAT, DEMO_LON = 37.4781, 126.9515          # 관악구청 (관악구 청룡동)
 
 # 기상청 단기예보 API (공공데이터포털 '디코딩' 인증키)
 KMA_KEY = os.getenv("KMA_SERVICE_KEY", "")

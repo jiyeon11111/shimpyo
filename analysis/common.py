@@ -81,7 +81,7 @@ def asos_hourly() -> pd.DataFrame:
 
 
 def hot_hours(df: pd.DataFrame) -> pd.Series:
-    """시간 자료 한 줄마다 체감온도 기준(33도 이상, engine.rules.is_hot과 같음)을 넘었는지 표시.
+    """시간 자료 한 줄마다 체감온도 기준(engine.rules.HEAT_MIN_C 이상, is_hot과 같음)을 넘었는지 표시.
 
     지급 가능한 시간의 상한일 뿐이다. 실제 지급은 라이더의 자격(평소 근무)·노출(배달 이동 N분)·
     쉼(20분 이상)을 함께 봐야 하므로 기상 자료만으로는 지급 시간을 셀 수 없다.

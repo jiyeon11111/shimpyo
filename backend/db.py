@@ -56,11 +56,11 @@ def init():
         if not c.execute("SELECT 1 FROM riders").fetchone():
             c.execute("INSERT INTO riders (id, name, home_sido) VALUES (1, '민수', '서울')")
         if config.DEMO_MODE and not c.execute("SELECT 1 FROM rests WHERE virtual = 1").fetchone():
-            # 시연용: 지난주 쉼 기록 몇 건 (가상). 합의안 정산: 한 번에 최대 30분치 × 평소 시간당 수입
+            # 시연용: 지난주 쉼 기록 몇 건 (가상). 확정안 정산: 한 번에 30분치와 1만 원 중 작은 쪽 × 평소 시간당 수입
             past = [("2026-07-28T14:10", "2026-07-28T14:40", 30, 14_600), ("2026-07-30T13:30", "2026-07-30T13:55", 25, 18_900),
                     ("2026-07-31T15:00", "2026-07-31T15:40", 40, 13_900), ("2026-08-02T16:00", "2026-08-02T16:30", 30, 15_200)]
             for s, e, m, w in past:
                 paid = min(m, 30)
                 c.execute("""INSERT INTO rests (rider_id, start, end, place, verified, nx, ny, sido, sgg, emd,
-                             rested_min, paid_min, amount, virtual, eligible, usual_hourly) VALUES (1, ?, ?, 'shelter', 1, 59, 126,
-                             '서울특별시', '마포구', '서교동', ?, ?, ?, 1, 1, ?)""", (s, e, m, paid, round(paid / 60 * w), w))
+                             rested_min, paid_min, amount, virtual, eligible, usual_hourly) VALUES (1, ?, ?, 'shelter', 1, 59, 125,
+                             '서울특별시', '관악구', '청룡동', ?, ?, ?, 1, 1, ?)""", (s, e, m, paid, min(round(paid / 60 * w), 10_000), w))

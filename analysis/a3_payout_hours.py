@@ -1,9 +1,9 @@
 # %% [markdown]
-# # 분석 3: 1년에 몇 시간이 33도를 넘는가, 얼마가 드는가
-# 질문: 지역별로 1년에 체감 33도 이상인 시간이 얼마이고, 라이더 전체에 필요한 예산은 얼마인가?
+# # 분석 3: 1년에 몇 시간이 32도를 넘는가, 얼마가 드는가
+# 질문: 지역별로 1년에 체감 32도 이상인 시간이 얼마이고, 라이더 전체에 필요한 예산은 얼마인가?
 # 데이터: D01·D02 ASOS, D08 시도별 라이더 수, 기준은 engine/rules.py·payout.py 그대로
-# 방법: 과거 각 연도 시간자료에서 33도 이상인 시간을 센다 → 시도별 연간 시간.
-#       법 기준 "2시간마다 20분"에 맞춰 33도 이상 2시간마다 쉼 한 번으로 본다 (하루 4번 상한은 근사).
+# 방법: 과거 각 연도 시간자료에서 32도 이상인 시간을 센다 → 시도별 연간 시간.
+#       법의 "2시간마다 20분" 방식을 따라 32도 이상 2시간마다 쉼 한 번으로 본다 (하루 4번 상한은 근사).
 #       예산 = 라이더 수 × 쉼 횟수 × 참여율 × 한 번 지급(30분치 × 평소 시간당 수입 가정)
 #       자격·노출 조건으로 실제 지급은 이보다 적다 → 보수적 상한값
 # 결과: outputs/a3_hours_by_region.png, outputs/a3_budget.csv
@@ -16,7 +16,7 @@ from common import OUT, HEAT, INK, asos_hourly, hot_hours, load, setup_plot, tit
 from engine.payout import DAILY_PAID_RESTS, REST_PAY_CAP_MIN
 
 plt = setup_plot()
-PARTICIPATION = 0.5          # 33도 이상에 실제로 쉬는 비율 (가정, 시뮬레이션으로 조정)
+PARTICIPATION = 0.5          # 32도 이상에 실제로 쉬는 비율 (가정, 시뮬레이션으로 조정)
 USUAL_HOURLY_WON = 15_000    # 평소 시간당 수입 (가정, 라이더 실태조사로 교체)
 
 h = asos_hourly()
@@ -49,7 +49,7 @@ y = np.arange(len(s))
 ax.barh(y, s["더운 해, 상위 10% (시간)"], color=HEAT["35"], alpha=0.35, label="더운 해 (상위 10%)")
 ax.barh(y, s["평균 해 (시간)"], color=HEAT["35"], label="평균 해")
 ax.set_yticks(y, s.index)
-ax.set_xlabel("연간 체감 33도 이상 시간 (시간)")
+ax.set_xlabel("연간 체감 32도 이상 시간 (시간)")
 ax.legend(frameon=False, loc="lower right")
-ax.set_title(title("지역별 1년 중 체감 33도를 넘는 시간", ["asos", "riders"]), loc="left", fontsize=12)
+ax.set_title(title("지역별 1년 중 체감 32도를 넘는 시간", ["asos", "riders"]), loc="left", fontsize=12)
 fig.tight_layout(); fig.savefig(f"{OUT}/a3_hours_by_region.png", dpi=160)

@@ -76,6 +76,11 @@ def get_report(lat: float, lon: float, at: str | None = None):
     return _call(services.report, lat, lon, at)
 
 
+@app.get("/api/dongs")
+def get_dongs():
+    return _call(services.dong_geo)
+
+
 @app.post("/api/demo/reset")
 def post_demo_reset():
     return _call(services.demo_reset)

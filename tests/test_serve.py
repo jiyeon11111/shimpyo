@@ -36,5 +36,6 @@ def test_rider_app_has_no_region_tab(base):
 
 def test_admin_page_and_report(base):
     assert "admin.js" in _get(base + "/admin.html")
-    r = json.loads(_get(base + "/api/report?lat=37.5552&lon=126.9222&at=15:00"))
-    assert len(r["grid"]) == 49 and r["virtual"] is True and r["missed_hours"] >= 0
+    r = json.loads(_get(base + "/api/report?lat=37.4781&lon=126.9515&at=15:00"))
+    assert len(r["dongs"]) == 21 and r["virtual"] is True and r["missed_hours"] >= 0
+    assert len(json.loads(_get(base + "/api/dongs"))["features"]) == 21

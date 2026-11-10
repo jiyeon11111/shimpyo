@@ -28,6 +28,7 @@ GET = {
     "/api/history": lambda q: services.history(_q(q, "rider_id", int, 1), _q(q, "at")),
     "/api/shelters": lambda q: services.shelter_list(_q(q, "lat", float), _q(q, "lon", float), _q(q, "kind")),
     "/api/report": lambda q: services.report(_q(q, "lat", float), _q(q, "lon", float), _q(q, "at")),
+    "/api/dongs": lambda q: services.dong_geo(),
 }
 POST = {
     "/api/rest/start": lambda b: services.rest_start(int(b.get("rider_id", 1)), float(b["lat"]), float(b["lon"]), b.get("place", "shelter"), b.get("at")),

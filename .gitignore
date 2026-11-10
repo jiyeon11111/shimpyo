@@ -5,3 +5,8 @@ data/raw/
 data/sample/
 outputs/
 .venv/
+
+# 팀 데이터 (용량 큼, 드라이브에서 받기)
+data/gwanak/*.gz
+!data/gwanak/관악_동별체감온도_모델_2026.csv.gz
+data/gwanak/team_scripts/

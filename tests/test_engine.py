@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from engine import apparent_temp_summer, exposure_min, is_hot, judge_start, settle_rest
+from engine import Call, RiderBook, apparent_temp_summer, exposure_min, is_hot, judge_start, longest_dong, settle_rest, slot_of
+from engine.payout import REST_PAY_CAP_WON, usual_hourly
 
 
 # --- 체감온도 ---------------------------------------------------------
@@ -61,26 +62,26 @@ def test_move_in_progress_clipped_at_now():
 # --- 쉼 시작 판정 ------------------------------------------------------
 
 def test_all_three_conditions_pay():
-    d = judge_start(34.0, True, steady(), AT)
-    assert d.pay_eligible and d.reasons == () and d.exposure_min >= 80
+    d = judge_start(34.0, 12, steady(), AT)
+    assert d.pay_eligible and d.reasons == () and d.exposure_min >= 60
 
 
-def test_33_boundary_and_no_time_window():
-    assert is_hot(33.0) and not is_hot(32.9)
+def test_32_boundary_and_no_time_window():
+    assert is_hot(32.0) and not is_hot(31.9)
     night = datetime(2026, 8, 3, 21, 0)
     mv = [(night - timedelta(minutes=100), night - timedelta(minutes=5))]
-    assert judge_start(33.0, True, mv, night).pay_eligible      # 14~17시 제한 없음
+    assert judge_start(32.0, 12, mv, night).pay_eligible      # 14~17시 제한 없음 (18~22시 시간대)
 
 
 def test_each_failed_condition_gives_reason():
-    d = judge_start(32.0, False, steady(15, 25), AT)
+    d = judge_start(31.0, 11, steady(15, 25), AT)
     assert not d.pay_eligible and len(d.reasons) == 3
 
 
 def test_exposure_need_boundary():
-    mv = [(AT - timedelta(minutes=80), AT)]
-    assert judge_start(35.0, True, mv, AT).pay_eligible
-    assert not judge_start(35.0, True, mv, AT, need_min=81).pay_eligible
+    mv = [(AT - timedelta(minutes=60), AT)]
+    assert judge_start(35.0, 12, mv, AT).pay_eligible
+    assert not judge_start(35.0, 12, mv, AT, need_min=61).pay_eligible
 
 
 def test_hotter_does_not_change_amount():
@@ -116,12 +117,96 @@ def test_ineligible_start_never_paid():
     assert r.amount == 0 and r.reason == "이유"
 
 
+def test_labor_needs_12_of_28_days():
+    assert judge_start(35.0, 12, steady(), AT).pay_eligible
+    d = judge_start(35.0, 11, steady(), AT)
+    assert not d.pay_eligible and "12~15시" in d.reasons[0] and "11일" in d.reasons[0]
+
+
+def test_slots_and_night_not_eligible():
+    assert [slot_of(datetime(2026, 8, 3, h)) for h in (5, 6, 8, 9, 12, 15, 18, 21, 22)] == [None, 0, 0, 1, 2, 3, 4, 4, None]
+    night = datetime(2026, 8, 3, 22, 30)
+    mv = [(night - timedelta(minutes=90), night - timedelta(minutes=5))]
+    d = judge_start(35.0, 28, mv, night)
+    assert not d.pay_eligible and d.reasons == ("22시~6시는 적립 시간대가 아니에요",)
+
+
+def test_no_dong_temperature_gives_reason():
+    d = judge_start(None, 12, steady(), AT)
+    assert not d.pay_eligible and "동" in d.reasons[0]
+
+
+def test_longest_dong_splits_each_leg_in_half():
+    a, b, c = "A", "B", "C"
+    legs = [(AT - timedelta(minutes=50), AT - timedelta(minutes=30), a, b),    # 20분: A 10, B 10
+            (AT - timedelta(minutes=25), AT - timedelta(minutes=5), b, c),     # 20분: B 10, C 10
+            (AT - timedelta(minutes=90), AT - timedelta(minutes=70), c, c)]    # 1시간 밖: 세지 않음
+    assert longest_dong(legs, AT) == b
+    assert longest_dong([], AT) is None
+
+
+def test_rest_capped_at_10000_won():
+    r = settle_rest(AT, AT + timedelta(minutes=30), True, 21_500)       # 30분치 10,750원 → 1만 원
+    assert (r.paid_min, r.amount) == (30, REST_PAY_CAP_WON)
+    assert settle_rest(AT, AT + timedelta(minutes=30), True, 19_000).amount == 9_500
+    # 시간당 2만 원 상한을 먼저 건다: 25분 × 2만 원 = 8,333원 (30분치·1만 원 비교가 아니다)
+    assert settle_rest(AT, AT + timedelta(minutes=25), True, 24_000).amount == 8_333
+
+
+def test_no_usual_income_not_paid():
+    r = settle_rest(AT, AT + timedelta(minutes=30), True, 0)
+    assert r.amount == 0 and "평소 수입" in r.reason
+
+
+# --- 운행 기록에서 판정 재료 뽑기 ------------------------------------
+
+def _call(day, hh, mm, fee=4_000, dongs=("A", "B", "C")):
+    t = datetime(2026, 8, day, hh, mm)
+    return Call(t, t + timedelta(minutes=6), t + timedelta(minutes=10), t + timedelta(minutes=16), *dongs, fee)
+
+
+def test_rider_book_worked_days_and_usual_income():
+    # 7월 6일(월)부터 4주 동안 매일 13:00~14:16 운행(콜 4건, 20분 간격). 8월 3일(월) 13시 기준
+    calls = []
+    for i in range(28):
+        d = datetime(2026, 7, 6) + timedelta(days=i)
+        for hh, mm in ((13, 0), (13, 20), (13, 40), (14, 0)):
+            t = d.replace(hour=hh, minute=mm)
+            calls.append(Call(t, t + timedelta(minutes=6), t + timedelta(minutes=10), t + timedelta(minutes=16), "A", "B", "C", 4_000))
+    book = RiderBook(calls)
+    at = datetime(2026, 8, 3, 13, 50)
+    assert book.worked_days(at) == 28 and book.worked_days(datetime(2026, 8, 3, 10, 0)) == 0
+    # 같은 요일(월) 13시에 수락한 콜 3건 = 12,000원. 4주 평균도 12,000원
+    assert book.usual_hourly(at) == usual_hourly([12_000] * 4) == 12_000
+    assert book.worked_days(datetime(2026, 8, 3, 23, 0)) == 0
+
+
+def test_worked_day_needs_60_minutes_in_slot():
+    # 매일 13:00~13:36만 운행(36분)하면 그 시간대에 일한 날로 세지 않는다
+    calls = [_call(d, 13, mm) for d in range(1, 29) for mm in (0, 20)]
+    book = RiderBook(calls)
+    assert book.worked_days(datetime(2026, 8, 29, 13, 0)) == 0
+
+
+def test_rider_book_gap_over_30_splits_work_time():
+    book = RiderBook([_call(3, 13, 0), _call(3, 13, 50)])   # 13:16 끝 → 13:50 시작: 34분 공백
+    assert book.work_min[(datetime(2026, 8, 3).date(), 2)] == 32
+    book = RiderBook([_call(3, 13, 0), _call(3, 13, 40)])   # 24분 공백은 이어 붙인다: 13:00~13:56
+    assert book.work_min[(datetime(2026, 8, 3).date(), 2)] == 56
+
+
+def test_usual_income_averages_only_worked_weeks():
+    # 4주 중 2주만 같은 요일 13시에 일함 (4,000원, 8,000원) → 6,000원
+    book = RiderBook([_call(13, 13, 0, fee=4_000), _call(20, 13, 0, fee=4_000), _call(20, 13, 30, fee=4_000)])
+    assert book.usual_hourly(datetime(2026, 8, 27, 13, 40)) == 6_000
+
+
 # --- 분석용 배열 판정이 엔진 판정과 같은지 ----------------------------
 
 def test_vectorized_hot_hours_matches_engine():
     import pandas as pd
     from analysis.common import hot_hours
-    temps = [30.0, 32.9, 33.0, 34.9, 35.0, 38.0]
+    temps = [30.0, 31.9, 32.0, 32.9, 33.0, 35.0, 38.0]
     df = pd.DataFrame({"at": temps})
     assert hot_hours(df).tolist() == [is_hot(t) for t in temps]
 
