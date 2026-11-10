@@ -25,7 +25,8 @@
     });
   }
   function pos() { return { lat: S.lat, lon: S.lon }; }
-  function heat(t) { return t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : t >= 32 ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
+  // 색: 32도 구간은 서버가 반올림 전 값으로 정한 hot을 쓴다 (화면의 32.0이 31.96일 수 있다)
+  function heat(t, hot) { return t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : hot ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
   var DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
   var ICON = {
@@ -43,7 +44,7 @@
     return '<div class="bars" aria-label="오늘 시간대별 체감온도">' + now.hours.map(function (x) {
       var hgt = Math.max(8, Math.min(100, (x.temp - lo) / (hi - lo) * 100));
       var cls = (x.h === nowH ? " now" : "") + (x.h > nowH ? " later" : "") + (from !== null && x.h >= from && x.h <= nowH ? " rest" : "");
-      return '<div class="bar' + cls + '" title="' + x.h + '시 ' + x.temp + '도"><i style="height:' + hgt + '%;background:' + heat(x.temp) + '"></i><b class="' + (x.hot ? "pay" : "") + '"></b></div>';
+      return '<div class="bar' + cls + '" title="' + x.h + '시 ' + x.temp + '도"><i style="height:' + hgt + '%;background:' + heat(x.temp, x.hot) + '"></i><b class="' + (x.hot ? "pay" : "") + '"></b></div>';
     }).join("") + '</div><div class="bars-axis fig"><span>6시</span><span>12</span><span>18</span><span>22시</span></div>';
   }
   function hotRange(now) {
@@ -92,7 +93,7 @@
     if (S.banner) h += '<div class="banner" role="alert">' + S.banner + '</div>';
     h += '<p class="eyebrow">' + v.s + '</p><h1 class="title">' + v.h + '</h1>';
     h += '<section class="hero" aria-label="지금 체감온도">' +
-      '<div class="hero-top"><span class="chip"><i style="background:' + heat(now.temp) + '"></i>' + now.stage.name + ' 단계</span><span class="hero-time fig">' + now.time.slice(11) + '</span></div>' +
+      '<div class="hero-top"><span class="chip"><i style="background:' + heat(now.temp, now.hot) + '"></i>' + now.stage.name + ' 단계</span><span class="hero-time fig">' + now.time.slice(11) + '</span></div>' +
       '<div class="hero-temp fig">' + now.temp.toFixed(1) + '<sup>°</sup><small>체감온도</small></div>' +
       bars(now, null) +
       '<div class="hero-foot"><div>' + foot + '</div>' +

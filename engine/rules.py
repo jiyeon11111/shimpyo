@@ -93,22 +93,37 @@ def exposure_min(moves: list[Move], at: datetime) -> int:
     return int(total)
 
 
-def dong_minutes(legs: list[Leg], at: datetime, window_min: int = DONG_WINDOW_MIN) -> dict[str, float]:
-    """at 전 window_min분 동안 동별로 달린 분. 이동 구간마다 양 끝 동에 반씩 더한다."""
-    lo = at - timedelta(minutes=window_min)
+DONG_LAST_LEGS = 13     # 가장 오래 달린 동은 최근 이동 13개만 본다 (팀 분석 analysis3.py와 같음)
+
+
+def dong_minutes(legs: list[Leg], at: datetime, window_min: int = DONG_WINDOW_MIN,
+                 last_n: int | None = DONG_LAST_LEGS) -> dict[str, float]:
+    """at 전 window_min분 동안 동별로 달린 분. 이동 구간마다 출발쪽 동, 도착쪽 동 순서로 반씩 더한다.
+
+    legs는 시간 순서이고 at까지의 이동만 들어온다. 그중 최근 last_n개만 본다.
+    분은 at 날짜 0시부터의 분(float)으로 계산한다. 팀 분석 analysis3.py와 같은 계산이라 동점 판정까지 같다.
+    """
+    base = at.replace(hour=0, minute=0, second=0, microsecond=0)
+    m = lambda t: (t - base).total_seconds() / 60  # noqa: E731
+    t, lo = m(at), m(at) - window_min
     out: dict[str, float] = {}
-    for s, e, a, b in legs:
-        m = (min(e, at) - max(s, lo)).total_seconds() / 60
-        if m > 0:
-            out[a] = out.get(a, 0.0) + m / 2
-            out[b] = out.get(b, 0.0) + m / 2
+    for s, e, a, b in (legs[-last_n:] if last_n else legs):
+        ov = max(0.0, min(m(e), t) - max(m(s), lo))
+        if ov > 0:
+            out[a] = out.get(a, 0.0) + ov / 2
+            out[b] = out.get(b, 0.0) + ov / 2
     return out
 
 
-def longest_dong(legs: list[Leg], at: datetime, window_min: int = DONG_WINDOW_MIN) -> str | None:
-    """쉼 시작 전 1시간 동안 가장 오래 달린 동 코드. 달린 기록이 없으면 None. 같으면 코드가 작은 동."""
-    mins = dong_minutes(legs, at, window_min)
-    return min(mins, key=lambda k: (-round(mins[k], 6), k)) if mins else None
+def longest_dong(legs: list[Leg], at: datetime, window_min: int = DONG_WINDOW_MIN,
+                 last_n: int | None = DONG_LAST_LEGS) -> str | None:
+    """쉼 시작 전 1시간 동안 가장 오래 달린 동 코드. 달린 기록이 없으면 None.
+
+    동점 규칙은 팀 분석 analysis3.py와 같은 규칙: 최근 13개 이동만 보고, 분이 같으면 먼저 더해진 동
+    (오래된 이동의 출발쪽 동부터)이 이긴다. max(w, key=w.get).
+    """
+    mins = dong_minutes(legs, at, window_min, last_n)
+    return max(mins, key=mins.get) if mins else None
 
 
 def judge_start(apparent_temp: float | None, worked_days: int, moves: list[Move], at: datetime,

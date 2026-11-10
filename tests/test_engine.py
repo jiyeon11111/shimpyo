@@ -73,6 +73,13 @@ def test_32_boundary_and_no_time_window():
     assert judge_start(32.0, 12, mv, night).pay_eligible      # 14~17시 제한 없음 (18~22시 시간대)
 
 
+def test_31_96_is_not_hot_even_if_shown_as_32_0():
+    # 판정은 반올림 전 값으로 한다. 31.96은 화면에 32.0으로 보여도 기준 미달이다.
+    assert not is_hot(31.96) and round(31.96, 1) == 32.0
+    d = judge_start(31.96, 12, steady(), AT)
+    assert not d.pay_eligible and any("체감온도" in r for r in d.reasons)
+
+
 def test_each_failed_condition_gives_reason():
     d = judge_start(31.0, 11, steady(15, 25), AT)
     assert not d.pay_eligible and len(d.reasons) == 3
@@ -143,6 +150,23 @@ def test_longest_dong_splits_each_leg_in_half():
             (AT - timedelta(minutes=90), AT - timedelta(minutes=70), c, c)]    # 1시간 밖: 세지 않음
     assert longest_dong(legs, AT) == b
     assert longest_dong([], AT) is None
+
+
+def test_longest_dong_tie_goes_to_first_seen_dong():
+    # 두 동이 같은 분이면 먼저 나온 동 (팀 analysis3.py와 같은 규칙). 코드 크기와 무관하다.
+    z, a = "Z", "A"
+    legs = [(AT - timedelta(minutes=40), AT - timedelta(minutes=20), z, a)]   # Z 10, A 10
+    assert longest_dong(legs, AT) == z
+    legs = [(AT - timedelta(minutes=40), AT - timedelta(minutes=20), a, z)]
+    assert longest_dong(legs, AT) == a
+
+
+def test_longest_dong_looks_at_last_13_legs_only():
+    m = lambda k: AT - timedelta(minutes=k)  # noqa: E731
+    old = [(m(59), m(45), "X", "X")]                                           # X 14분, 14번째 전 이동
+    recent = [(m(44 - 3 * i), m(43 - 3 * i), "Y" if i % 2 else "W", "Y" if i % 2 else "W") for i in range(13)]
+    assert longest_dong(old + recent, AT) != "X"
+    assert longest_dong(old + recent, AT, last_n=None) == "X"
 
 
 def test_rest_capped_at_10000_won():

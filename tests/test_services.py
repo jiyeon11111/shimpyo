@@ -121,3 +121,17 @@ def test_rest_start_auto_place(svc):
     assert svc.rest_start(1, LAT, LON, "auto", "14:00")["place"] == "shelter"
     svc.rest_stop(1, "14:30")
     assert svc.rest_start(1, 37.60, 126.99, "auto", "15:00")["place"] == "street"   # 쉼터에서 먼 곳
+
+
+def test_model_31_96_shows_32_0_but_is_not_paid(svc, monkeypatch):
+    """모델 값 31.96: 화면에는 32.0으로 보이지만 판정은 원래 값이라 지급 대상이 아니다."""
+    from backend import gwanak
+    monkeypatch.setattr(gwanak, "temp", lambda code, t: 31.96 if code else None)
+    r = svc.now_status(LAT, LON, "14:00")
+    assert r["temp"] == 32.0 and r["judge_temp"] == 32.0
+    assert r["hot"] is False and r["pay_now"] is False and any("체감온도" in x for x in r["reasons"])
+    assert all(h["temp"] == 32.0 and h["hot"] is False for h in r["hours"])
+    s = svc.rest_start(1, LAT, LON, "auto", "14:00")
+    assert s["eligible"] is False
+    rep = svc.report(LAT, LON, "14:00")
+    assert all(d["temp"] == 32.0 and d["hot"] is False for d in rep["dongs"])

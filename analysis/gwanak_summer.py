@@ -108,7 +108,7 @@ def rider_season(book: RiderBook, rid: str, opps: list, hot: dict) -> None:
                 h1 = h + timedelta(hours=1)
                 m = (min(e, h1) - max(s, h)).total_seconds() / 60
                 if m > 0:
-                    code = longest_dong(legs_all, h1, 60)
+                    code = longest_dong([leg for leg in legs_all if leg[0] < h1], h1, 60)
                     t = gwanak.temp(code, h)
                     if t is not None and is_hot(t):
                         hot[(day.isoformat(), h.hour, code)] += m
@@ -143,7 +143,7 @@ def rests_table(o: pd.DataFrame, rest: np.ndarray) -> pd.DataFrame:
         s = r.완료
         res = settle_rest(s, s + timedelta(minutes=REST_PAY_CAP_MIN), True, int(r.평소시급), int(r.앞선지급))
         rows.append({"라이더ID": r.라이더ID, "날짜": r.날짜.isoformat(), "시작": s.strftime("%H:%M"),
-                     "끝": (s + timedelta(minutes=REST_PAY_CAP_MIN)).strftime("%H:%M"), "판정동코드": r.동, "체감온도": r.체감온도,
+                     "끝": (s + timedelta(minutes=REST_PAY_CAP_MIN)).strftime("%H:%M"), "판정동코드": r.동, "체감온도": round(r.체감온도, 2),
                      "시간대": slot_label(slot_of(s)), "평소시급": int(r.평소시급), "앞선지급": int(r.앞선지급),
                      "쉰분": res.rested_min, "지급분": res.paid_min, "지급액": res.amount,
                      "상한전지급액": round(r.평소시급 * REST_PAY_CAP_MIN / 60)})

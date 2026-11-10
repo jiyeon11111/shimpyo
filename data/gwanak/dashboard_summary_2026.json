@@ -4,222 +4,222 @@
   "2026-09-30"
  ],
  "riders": 1000,
- "paid_riders": 871,
- "paid_rests": 19815,
- "paid_hours": 9907.5,
- "amount": 116501099,
+ "paid_riders": 870,
+ "paid_rests": 19426,
+ "paid_hours": 9713.0,
+ "amount": 114185957,
  "rest_p": 0.5,
- "capped_10000": 346,
+ "capped_10000": 339,
  "scenarios": {
   "1.0": {
    "p": 1.0,
-   "rests": 25447,
-   "riders": 872,
-   "amount_uncapped": 150138884,
-   "amount": 149805435,
-   "median_uncapped": 5856.0,
-   "p99_uncapped": 10425.0,
-   "per_day": 2.087,
-   "capped": 450,
-   "zero_usual": 71
+   "rests": 24941,
+   "riders": 871,
+   "amount_uncapped": 147202530,
+   "amount": 146872011,
+   "median_uncapped": 5859.0,
+   "p99_uncapped": 10428.999999999993,
+   "per_day": 2.078,
+   "capped": 443,
+   "zero_usual": 67
   },
   "0.5": {
    "p": 0.5,
-   "rests": 19889,
-   "riders": 871,
-   "amount_uncapped": 116757117,
-   "amount": 116501099,
+   "rests": 19500,
+   "riders": 870,
+   "amount_uncapped": 114436637,
+   "amount": 114185957,
    "median_uncapped": 5830.0,
-   "p99_uncapped": 10424.239999999998,
-   "per_day": 1.786,
-   "capped": 346,
+   "p99_uncapped": 10424.019999999997,
+   "per_day": 1.779,
+   "capped": 339,
    "zero_usual": 74
   },
   "0.25": {
    "p": 0.25,
-   "rests": 13739,
-   "riders": 859,
-   "amount_uncapped": 80082990,
-   "amount": 79928024,
-   "median_uncapped": 5791.0,
-   "p99_uncapped": 10367.239999999998,
-   "per_day": 1.475,
-   "capped": 230,
+   "rests": 13481,
+   "riders": 858,
+   "amount_uncapped": 78572457,
+   "amount": 78418007,
+   "median_uncapped": 5792.0,
+   "p99_uncapped": 10374.800000000003,
+   "per_day": 1.472,
+   "capped": 227,
    "zero_usual": 59
   }
  },
- "missed_hours": 80343.6,
+ "missed_hours": 78920.2,
  "opportunities": {
   "쉼 기회(배달 완료)": 1690369,
-  "자격": 192483,
-  "체감온도 32도 미만": 1455961,
+  "자격": 188996,
+  "체감온도 32도 미만": 1460252,
   "일한 날 12일 미만": 305276,
   "22시~6시": 23703
  },
  "by_month": {
   "2026-06": {
-   "riders": 104,
-   "paid_hours": 52.0,
-   "amount": 454813
+   "riders": 89,
+   "paid_hours": 44.5,
+   "amount": 368643
   },
   "2026-07": {
-   "riders": 802,
-   "paid_hours": 4284.5,
-   "amount": 50530383
+   "riders": 794,
+   "paid_hours": 4160.0,
+   "amount": 49005884
   },
   "2026-08": {
    "riders": 838,
-   "paid_hours": 5571.0,
-   "amount": 65515903
+   "paid_hours": 5508.5,
+   "amount": 64811430
   }
  },
  "by_dong": {
   "1162052500": {
    "name": "보라매동",
    "riders": 469,
-   "paid_hours": 421.0,
-   "amount": 4992371,
-   "missed_hours": 3517.3
+   "paid_hours": 415.0,
+   "amount": 4925318,
+   "missed_hours": 3452.0
   },
   "1162054500": {
    "name": "청림동",
-   "riders": 175,
-   "paid_hours": 99.5,
-   "amount": 1189276,
-   "missed_hours": 655.5
+   "riders": 174,
+   "paid_hours": 99.0,
+   "amount": 1181716,
+   "missed_hours": 633.8
   },
   "1162056500": {
    "name": "성현동",
    "riders": 300,
-   "paid_hours": 202.5,
-   "amount": 2394942,
-   "missed_hours": 1589.0
+   "paid_hours": 200.5,
+   "amount": 2384897,
+   "missed_hours": 1562.7
   },
   "1162057500": {
    "name": "행운동",
-   "riders": 414,
-   "paid_hours": 337.0,
-   "amount": 3907675,
-   "missed_hours": 2470.2
+   "riders": 413,
+   "paid_hours": 334.0,
+   "amount": 3872152,
+   "missed_hours": 2424.3
   },
   "1162058500": {
    "name": "낙성대동",
-   "riders": 332,
-   "paid_hours": 232.0,
-   "amount": 2680605,
-   "missed_hours": 1798.9
+   "riders": 319,
+   "paid_hours": 221.5,
+   "amount": 2518460,
+   "missed_hours": 1746.5
   },
   "1162059500": {
    "name": "청룡동",
-   "riders": 643,
-   "paid_hours": 918.0,
-   "amount": 10752914,
-   "missed_hours": 7531.8
+   "riders": 641,
+   "paid_hours": 889.5,
+   "amount": 10417516,
+   "missed_hours": 7301.7
   },
   "1162060500": {
    "name": "은천동",
-   "riders": 506,
-   "paid_hours": 494.0,
-   "amount": 5796910,
-   "missed_hours": 4017.5
+   "riders": 504,
+   "paid_hours": 485.5,
+   "amount": 5713845,
+   "missed_hours": 3963.4
   },
   "1162061500": {
    "name": "중앙동",
-   "riders": 482,
-   "paid_hours": 434.0,
-   "amount": 5085893,
-   "missed_hours": 3515.7
+   "riders": 480,
+   "paid_hours": 432.0,
+   "amount": 5043984,
+   "missed_hours": 3460.2
   },
   "1162062500": {
    "name": "인헌동",
-   "riders": 277,
-   "paid_hours": 181.5,
-   "amount": 2055550,
-   "missed_hours": 1361.6
+   "riders": 269,
+   "paid_hours": 176.5,
+   "amount": 2014193,
+   "missed_hours": 1356.9
   },
   "1162063000": {
    "name": "남현동",
    "riders": 120,
    "paid_hours": 68.5,
    "amount": 774950,
-   "missed_hours": 539.6
+   "missed_hours": 533.8
   },
   "1162064500": {
    "name": "서원동",
-   "riders": 527,
-   "paid_hours": 486.0,
-   "amount": 5778762,
-   "missed_hours": 4530.5
+   "riders": 526,
+   "paid_hours": 487.0,
+   "amount": 5793515,
+   "missed_hours": 4477.9
   },
   "1162065500": {
    "name": "신원동",
-   "riders": 553,
-   "paid_hours": 616.5,
-   "amount": 7219668,
-   "missed_hours": 5071.1
+   "riders": 549,
+   "paid_hours": 610.0,
+   "amount": 7163287,
+   "missed_hours": 5015.8
   },
   "1162066500": {
    "name": "서림동",
-   "riders": 476,
-   "paid_hours": 422.0,
-   "amount": 5030766,
-   "missed_hours": 3650.8
+   "riders": 466,
+   "paid_hours": 403.5,
+   "amount": 4763881,
+   "missed_hours": 3525.3
   },
   "1162068500": {
    "name": "신사동",
-   "riders": 702,
-   "paid_hours": 1280.5,
-   "amount": 15288140,
-   "missed_hours": 11054.8
+   "riders": 696,
+   "paid_hours": 1272.5,
+   "amount": 15208734,
+   "missed_hours": 10910.3
   },
   "1162069500": {
    "name": "신림동",
-   "riders": 737,
-   "paid_hours": 1464.0,
-   "amount": 17322176,
-   "missed_hours": 12481.6
+   "riders": 727,
+   "paid_hours": 1415.0,
+   "amount": 16774580,
+   "missed_hours": 12182.7
   },
   "1162071500": {
    "name": "난향동",
-   "riders": 106,
-   "paid_hours": 56.5,
-   "amount": 652036,
-   "missed_hours": 373.9
+   "riders": 101,
+   "paid_hours": 54.0,
+   "amount": 628727,
+   "missed_hours": 360.9
   },
   "1162072500": {
    "name": "조원동",
-   "riders": 574,
-   "paid_hours": 679.0,
-   "amount": 8002970,
-   "missed_hours": 5314.7
+   "riders": 575,
+   "paid_hours": 676.0,
+   "amount": 7935210,
+   "missed_hours": 5301.2
   },
   "1162073500": {
    "name": "대학동",
-   "riders": 435,
-   "paid_hours": 370.0,
-   "amount": 4180506,
-   "missed_hours": 2338.0
+   "riders": 434,
+   "paid_hours": 366.5,
+   "amount": 4138968,
+   "missed_hours": 2323.1
   },
   "1162074500": {
    "name": "삼성동",
-   "riders": 389,
-   "paid_hours": 297.0,
-   "amount": 3405877,
-   "missed_hours": 1978.7
+   "riders": 385,
+   "paid_hours": 289.0,
+   "amount": 3319156,
+   "missed_hours": 1957.8
   },
   "1162076500": {
    "name": "미성동",
-   "riders": 444,
-   "paid_hours": 394.5,
-   "amount": 4570774,
-   "missed_hours": 3112.3
+   "riders": 435,
+   "paid_hours": 375.5,
+   "amount": 4333007,
+   "missed_hours": 3021.4
   },
   "1162077500": {
    "name": "난곡동",
-   "riders": 501,
-   "paid_hours": 453.5,
-   "amount": 5418338,
-   "missed_hours": 3440.2
+   "riders": 494,
+   "paid_hours": 442.0,
+   "amount": 5279861,
+   "missed_hours": 3408.5
   }
  }
 }

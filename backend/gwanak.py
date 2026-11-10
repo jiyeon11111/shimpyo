@@ -69,15 +69,18 @@ def key(t: datetime) -> str:
 
 
 def temp(code: str | None, t: datetime) -> float | None:
-    """동의 t 시점 모델 체감온도. 동이 없거나 모델 기간 밖이면 None."""
+    """동의 t 시점 모델 체감온도 (반올림하지 않은 원래 값). 동이 없거나 모델 기간 밖이면 None.
+
+    판정(is_hot, judge_start)은 이 원래 값으로 한다. 31.96도를 32.0으로 올려 판정하면 안 된다.
+    반올림은 화면에 보여줄 때만 services.py에서 한다.
+    """
     if not code:
         return None
-    v = _model().get(code, {}).get(key(t))
-    return None if v is None else round(v, 1)
+    return _model().get(code, {}).get(key(t))
 
 
 def hourly(code: str, day: date, hours=range(6, 22)) -> dict[int, float]:
-    """막대 그래프용: h시~h+1시 값 (모델의 'h+1시')."""
+    """막대 그래프용: h시~h+1시 값 (모델의 'h+1시', 반올림 전 원래 값)."""
     out = {}
     for h in hours:
         v = temp(code, datetime(day.year, day.month, day.day, h, 30))

@@ -34,6 +34,11 @@ def _stage(t: float) -> dict:
     return {"name": "보통", "key": "0"}
 
 
+def _r1(v: float | None) -> float | None:
+    """화면에 보여줄 체감온도: 소수 첫째 자리. 판정에는 쓰지 않는다 (판정은 반올림 전 값)."""
+    return None if v is None else round(v, 1)
+
+
 def _fmt(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M")
 
@@ -80,8 +85,8 @@ def _judge(rider_id: int, t: datetime) -> dict:
     d = judge_start(temp, p["worked_days"], p["moves"], t)
     return {"pay_now": d.pay_eligible, "reasons": list(d.reasons), "exposure_min": d.exposure_min,
             "usual_hourly": p["usual_hourly"], "worked_days": p["worked_days"],
-            "judge_dong": {"code": code, "name": gwanak.name(code)} if code else None, "judge_temp": temp,
-            "alert": d.alert, "has_record": True}
+            "judge_dong": {"code": code, "name": gwanak.name(code)} if code else None, "judge_temp": _r1(temp),
+            "judge_temp_raw": temp, "alert": d.alert, "has_record": True}
 
 
 def _place(lat: float, lon: float):
@@ -103,12 +108,14 @@ def now_status(lat: float, lon: float, at: str | None = None, rider_id: int = 1)
     cell, code, _, sgg, emd = _place(lat, lon)
     j = _judge(rider_id, t)
     temp_code = (j["judge_dong"] or {}).get("code") or code
+    # temp·hourly는 반올림 전 값. 단계·hot 판정은 이 값으로 하고, 내보낼 때만 반올림한다.
     if config.DEMO_MODE and gwanak.temp(temp_code, t) is not None:
         temp = gwanak.temp(temp_code, t)
         hourly = gwanak.hourly(temp_code, t.date())
     else:
-        temp = round(_temp_fn(cell.nx, cell.ny, t)(t), 1)
-        hourly = {int(h): round(v, 1) for h, v in weather.hourly(cell.nx, cell.ny, t).items()}
+        temp = _temp_fn(cell.nx, cell.ny, t)(t)
+        hourly = {int(h): v for h, v in weather.hourly(cell.nx, cell.ny, t).items()}
+    j.pop("judge_temp_raw")
     near = shelters.nearest(lat, lon, None, 1)["items"]
     shelter = None
     if near:
@@ -116,9 +123,9 @@ def now_status(lat: float, lon: float, at: str | None = None, rider_id: int = 1)
         shelter = {"name": s0["name"], "kind": s0["kind"], "walk_min": s0["walk_min"], "distance_m": s0["distance_m"],
                    "inside": s0["distance_m"] <= shelters.VERIFY_RADIUS_M}
     return {"time": _fmt(t), "grid": [cell.nx, cell.ny], "place": " ".join(x for x in (sgg, emd) if x) or "현재 위치",
-            "dong": code, "temp_dong": gwanak.name(temp_code) if temp_code else None, "temp": temp, "stage": _stage(temp), "hot": is_hot(temp), **j,
-            "exposure_need_min": EXPOSURE_NEED_MIN, "hourly": hourly,
-            "hours": [{"h": h, "temp": v, "hot": is_hot(v)} for h, v in sorted(hourly.items())],
+            "dong": code, "temp_dong": gwanak.name(temp_code) if temp_code else None, "temp": _r1(temp), "stage": _stage(temp), "hot": is_hot(temp), **j,
+            "exposure_need_min": EXPOSURE_NEED_MIN, "hourly": {h: _r1(v) for h, v in hourly.items()},
+            "hours": [{"h": h, "temp": _r1(v), "hot": is_hot(v)} for h, v in sorted(hourly.items())],
             "shelter": shelter, "virtual_weather": config.DEMO_MODE, "virtual_rider": j["has_record"] and config.DEMO_MODE}
 
 
@@ -145,7 +152,7 @@ def rest_start(rider_id: int, lat: float, lon: float, place: str, at: str | None
             raise ServiceError("이미 쉬는 중입니다. 먼저 쉼을 종료하세요.", 409)
     # 판정은 쉼을 시작한 순간 기준: 직전 1시간 가장 오래 달린 동의 모델 체감온도. 근거를 기록에 남긴다.
     j = _judge(rider_id, t)
-    temp = j["judge_temp"]
+    temp = j.pop("judge_temp_raw")   # 근거 기록은 판정에 쓴 원래 값
     with db.conn() as c:
         cur = c.execute("""INSERT INTO rests (rider_id, start, place, verified, nx, ny, sido, sgg, emd,
                            eligible, reason, temp, exposure_min, usual_hourly) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -256,8 +263,8 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
         v = gwanak.temp(c, t) if config.DEMO_MODE else None
         if v is None and not config.DEMO_MODE:
             cell = locate(d["lat"], d["lon"])
-            v = round(_temp_fn(cell.nx, cell.ny, t)(t), 1)
-        per[c]["temp"] = v
+            v = _temp_fn(cell.nx, cell.ny, t)(t)
+        per[c]["temp"] = v   # 반올림 전. hot·stage를 정한 뒤 내보낼 때 반올림한다
 
     def add(code, resting, paid_min, amount):
         x = per.get(code)
@@ -301,6 +308,7 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
         x["paid_hours"], x["missed_hours"] = round(x.pop("paid_min") / 60, 1), round(x.pop("missed_min") / 60, 1)
         x["stage"] = _stage(x["temp"])["name"] if x["temp"] is not None else None
         x["hot"] = x["temp"] is not None and is_hot(x["temp"])
+        x["temp"] = _r1(x["temp"])
     return {"time": _fmt(t), "me": me, "dongs": dongs, "heat_min": HEAT_MIN_C,
             "resting": sum(x["resting"] for x in dongs) + out["resting"],
             "paid_hours": round(total_paid_min / 60, 1),

@@ -12,7 +12,8 @@
   function won(x) { return Math.round(x).toLocaleString("ko-KR") + "원"; }
   function num(x) { return (+x).toLocaleString("ko-KR"); }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function heat(t) { return t == null ? "var(--cool)" : t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : t >= 32 ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
+  // 색: 32도 구간은 서버가 반올림 전 값으로 정한 hot을 쓴다 (화면의 32.0이 31.96일 수 있다)
+  function heat(t, hot) { return t == null ? "var(--cool)" : t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : hot ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
   function api(path, params) {
     if (S.cfg.demo) params.at = hhmm(S.min);
     var qs = Object.keys(params).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
@@ -110,7 +111,7 @@
     g.features.forEach(function (f) {
       var d = by[f.code] || {}, t = d.temp;
       var tip = f.name + " " + (t == null ? "값 없음" : t.toFixed(1) + "도") + ", 오늘 보전 " + (d.paid_hours || 0) + "시간 " + won(d.amount || 0);
-      var path = '<path d="' + f.d + '" fill="' + heat(t) + '" class="dong' + (d.me ? " me" : "") + '"><title>' + esc(tip) + '</title></path>';
+      var path = '<path d="' + f.d + '" fill="' + heat(t, d.hot) + '" class="dong' + (d.me ? " me" : "") + '"><title>' + esc(tip) + '</title></path>';
       if (d.me) me = path; else paths += path;
     });
     return '<svg class="dongmap" viewBox="-10 -10 ' + (g.w + 20) + ' ' + (g.h + 20) + '" role="img" aria-label="관악구 행정동별 체감온도">' +
@@ -146,7 +147,7 @@
       '<div><span>오늘 지급 예정<sup>3</sup></span><b class="fig amt">' + won(r.amount) + '</b></div>' +
       '<div class="warn"><span>못 쉰 위험 시간</span><b class="fig">' + num(r.missed_hours) + '<small>시간</small></b></div></div>';
     h += '<div class="admin-body"><section class="hero admin-map" aria-label="행정동별 체감온도">' +
-      '<div class="hero-top"><span class="chip"><i style="background:' + heat(me && me.temp) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도, " + esc(me.stage) + " 단계") : "관악구") + '</span>' +
+      '<div class="hero-top"><span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도, " + esc(me.stage) + " 단계") : "관악구") + '</span>' +
       '<span class="hero-time fig">' + H + '도 이상 ' + hot + '곳 / 21곳<sup>1·2</sup></span></div>' +
       (S.geo ? mapSvg(r) : '<p class="note">지도 경계를 불러오는 중이에요.</p>') +
       '<div class="legend"><span><i style="background:var(--sun)"></i>' + H + '도 이상: 보전 기준 (모델 값)<sup>1</sup></span><span><i style="background:var(--amber)"></i>35도 이상</span><span><i style="background:var(--ember)"></i>38도 이상</span><span>흰 테두리: ' + esc(me ? me.name : "") + ' (시연 위치)</span></div>' +
