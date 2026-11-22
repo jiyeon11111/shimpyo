@@ -1,6 +1,6 @@
 /* 화면 파일만 캐시한다. API 응답은 캐시하지 않는다 (판정은 항상 서버 최신값). */
-const CACHE = "shimpyo-v14";
-const FILES = ["/", "/index.html", "/style.css", "/app.js", "/logo.js", "/admin.html", "/admin.js", "/manifest.webmanifest", "/icons/icon-192.png", "/fonts/SpoqaHanSansNeo-Regular.woff2", "/fonts/SpoqaHanSansNeo-Medium.woff2", "/fonts/SpoqaHanSansNeo-Bold.woff2"];
+const CACHE = "shimpyo-v16";
+const FILES = ["/", "/index.html", "/style.css", "/app.js", "/logo.js", "/admin.html", "/admin.js", "/manifest.webmanifest", "/icons/icon-192.png", "/fonts/BMJUA.woff"];
 self.addEventListener("install", e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))));
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))));
 self.addEventListener("fetch", e => {

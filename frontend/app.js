@@ -102,12 +102,25 @@
       '<span class="ck-v fig">' + val + '</span></div>';
   }
 
+  // 홈 맨 위 응원 한마디. 날씨와 오늘 쉰 기록에 맞춰 고른다. 같은 상황에서는 하루 동안 같은 문장이 나온다.
+  function cheer(now, hist, L, payNow) {
+    var name = L && L.rider_name ? esc(L.rider_name) + " 님, " : "", hr = Math.floor(S.cfg && S.cfg.demo ? S.min / 60 : new Date().getHours());
+    var set = hist.today_paid_rests > 0 ? ["잘 쉬었어요. 남은 배달도 무리하지 말고 가요.", "쉬어 간 만큼 더 안전하게 달릴 수 있어요."]
+      : payNow ? ["많이 덥죠. 쉬는 것도 일이에요.", "오늘 같은 날은 잠깐 쉬어 가도 괜찮아요."]
+      : now.hot ? ["더운 날 달리느라 고생 많아요. 물 한 모금 하고 가요.", "뜨거운 길 위에서 오늘도 수고가 많아요."]
+      : hr < 11 ? ["오늘도 안전하게 다녀와요.", "좋은 아침이에요. 천천히 시작해요."]
+      : hr >= 19 ? ["오늘 하루도 수고 많았어요. 끝까지 안전하게.", "늦은 시간까지 고생이 많아요."]
+      : ["오늘도 무리하지 말고 달려요.", "안전이 먼저예요. 오늘도 수고 많아요."];
+    var day = S.cfg && S.cfg.demo ? 3 : new Date().getDate();
+    return '<b>' + name + '</b>' + set[day % set.length];
+  }
   function vHome(now, cur, hist, near) {
     var v = verdict(now, hist), R = rules(), L = now.link;
     var payNow = L.pays && now.pay_now && hist.today_left_rests > 0, mock = !L.pays && now.pay_now;   // mock: 등록 전이라 조건만 맞는 상태
     var expect = Math.min(R.cap / 60 * L.pay_hourly, R.capWon), night = now.reasons.some(function (x) { return /22시/.test(x); });
     var h = '<header class="brand"><span class="word"><canvas id="miniLogo" width="56" height="68" aria-hidden="true"></canvas>쉼표</span>' +
       '<span class="brand-r"><span class="loc">' + ic("pin") + now.place + '</span><button class="iconbtn lite" id="infoBtn" aria-label="판정 기준과 자료 안내">' + ic("info") + '</button></span></header>';
+    h += '<p class="cheer">' + cheer(now, hist, L, payNow) + '</p>';
     h += bannerH();
     // 1) 지금 쉬면 받는지: 화면에서 가장 큰 한 덩어리
     h += payNow
