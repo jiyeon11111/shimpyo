@@ -29,11 +29,16 @@ GET = {
     "/api/shelters": lambda q: services.shelter_list(_q(q, "lat", float), _q(q, "lon", float), _q(q, "kind")),
     "/api/report": lambda q: services.report(_q(q, "lat", float), _q(q, "lon", float), _q(q, "at")),
     "/api/dongs": lambda q: services.dong_geo(),
+    "/api/rider": lambda q: services.rider_info(_q(q, "rider_id", int, 1)),
+    "/api/settlement": lambda q: services.settlement_summary(_q(q, "rider_id", int, 1), _q(q, "at")),
 }
 POST = {
     "/api/rest/start": lambda b: services.rest_start(int(b.get("rider_id", 1)), float(b["lat"]), float(b["lon"]), b.get("place", "shelter"), b.get("at")),
     "/api/rest/stop": lambda b: services.rest_stop(int(b.get("rider_id", 1)), b.get("at")),
     "/api/demo/reset": lambda b: services.demo_reset(),
+    "/api/consent": lambda b: services.consent(int(b.get("rider_id", 1)), b.get("at")),
+    "/api/settlement": lambda b: services.settlement_upload(int(b.get("rider_id", 1)), b.get("filename"), b.get("at")),
+    "/api/demo/stage": lambda b: services.demo_stage(int(b.get("rider_id", 1)), b.get("stage", "A")),
 }
 
 

@@ -12,7 +12,11 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS riders (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  home_sido TEXT            -- 가입 기준(재원): 거주지
+  home_sido TEXT,           -- 가입 기준(재원): 거주지
+  stage TEXT NOT NULL DEFAULT 'A',   -- 데이터 연동 단계: A 앱 단독, B 정산 내역 연계, C 플랫폼 연동
+  consent_at TEXT,          -- 위치 사용 동의 시각
+  settle_status TEXT,       -- 정산 내역 대조: pending(대조 대기) | verified(확인) | mismatch(불일치)
+  settle_at TEXT, settle_file TEXT
 );
 CREATE TABLE IF NOT EXISTS rests (
   id INTEGER PRIMARY KEY,
@@ -27,12 +31,16 @@ CREATE TABLE IF NOT EXISTS rests (
   virtual INTEGER NOT NULL DEFAULT 0,         -- 시연용 가상 기록이면 1
   -- 쉼을 시작할 때의 판정 근거 (나중에 정산·감사용)
   eligible INTEGER NOT NULL DEFAULT 0, reason TEXT,
-  temp REAL, exposure_min INTEGER, usual_hourly INTEGER
+  temp REAL, exposure_min INTEGER, usual_hourly INTEGER,
+  -- 지급 기준: 쉼을 시작할 때의 연동 단계, 기준(none 지급 없음 | usual 평소 수입), 적용한 시급
+  stage TEXT, basis TEXT, pay_hourly INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_rests_rider_start ON rests(rider_id, start);
 """
 # 이전 버전 DB 파일에 새 열 추가
-_NEW_COLS = ["eligible INTEGER NOT NULL DEFAULT 0", "reason TEXT", "temp REAL", "exposure_min INTEGER", "usual_hourly INTEGER"]
+_NEW_COLS = ["eligible INTEGER NOT NULL DEFAULT 0", "reason TEXT", "temp REAL", "exposure_min INTEGER", "usual_hourly INTEGER",
+             "stage TEXT", "basis TEXT", "pay_hourly INTEGER"]
+_NEW_RIDER_COLS = ["stage TEXT NOT NULL DEFAULT 'A'", "consent_at TEXT", "settle_status TEXT", "settle_at TEXT", "settle_file TEXT"]
 
 
 @contextmanager
@@ -53,6 +61,10 @@ def init():
         for col in _NEW_COLS:
             if col.split()[0] not in have:
                 c.execute(f"ALTER TABLE rests ADD COLUMN {col}")
+        have = {r[1] for r in c.execute("PRAGMA table_info(riders)")}
+        for col in _NEW_RIDER_COLS:
+            if col.split()[0] not in have:
+                c.execute(f"ALTER TABLE riders ADD COLUMN {col}")
         if not c.execute("SELECT 1 FROM riders").fetchone():
             c.execute("INSERT INTO riders (id, name, home_sido) VALUES (1, '민수', '서울')")
         if config.DEMO_MODE and not c.execute("SELECT 1 FROM rests WHERE virtual = 1").fetchone():
@@ -62,5 +74,6 @@ def init():
             for s, e, m, w in past:
                 paid = min(m, 30)
                 c.execute("""INSERT INTO rests (rider_id, start, end, place, verified, nx, ny, sido, sgg, emd,
-                             rested_min, paid_min, amount, virtual, eligible, usual_hourly) VALUES (1, ?, ?, 'shelter', 1, 59, 125,
-                             '서울특별시', '관악구', '청룡동', ?, ?, ?, 1, 1, ?)""", (s, e, m, paid, min(round(paid / 60 * w), 10_000), w))
+                             rested_min, paid_min, amount, virtual, eligible, usual_hourly, stage, basis, pay_hourly)
+                             VALUES (1, ?, ?, 'shelter', 1, 59, 125, '서울특별시', '관악구', '청룡동', ?, ?, ?, 1, 1, ?, 'C', 'usual', ?)""",
+                          (s, e, m, paid, min(round(paid / 60 * w), 10_000), w, w))

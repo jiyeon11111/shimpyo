@@ -250,3 +250,24 @@ def test_grid_known_points():
     assert latlon_to_grid(37.5665, 126.9780) == (60, 127)   # 서울시청
     assert latlon_to_grid(35.1796, 129.0756) == (98, 76)    # 부산시청
     assert latlon_to_grid(33.4996, 126.5312) == (53, 38)    # 제주시청
+
+
+# ----------------------------- 데이터 연동 단계별 지급 기준 -----------------------------
+def test_pay_hourly_by_stage():
+    """지급은 정산 내역 기반: A(등록 전)는 지급 없음, B·C는 평소 시간당 수입. 정액은 없다."""
+    import engine.payout as p
+    assert p.pay_hourly("A", 18_000) == (0, "none") and p.pay_hourly("A", 0) == (0, "none")
+    assert p.pay_hourly("B", 18_000) == (18_000, "usual") and p.pay_hourly("C", 7_988) == (7_988, "usual")
+    assert not hasattr(p, "FLAT_HOURLY_WON")
+    import pytest
+    with pytest.raises(ValueError):
+        p.pay_hourly("D", 1)
+
+
+def test_stage_b_and_c_pay_the_same():
+    from datetime import datetime
+    from engine.payout import pay_hourly, settle_rest
+    s = datetime(2026, 8, 3, 14, 0)
+    b, c = pay_hourly("B", 7_988)[0], pay_hourly("C", 7_988)[0]
+    assert settle_rest(s, s.replace(minute=30), True, b).amount == settle_rest(s, s.replace(minute=30), True, c).amount == 3_994
+    assert settle_rest(s, s.replace(minute=30), True, pay_hourly("B", 0)[0]).amount == 0     # 그 시간대 수입 기록이 없으면 0원

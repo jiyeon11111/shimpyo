@@ -3,6 +3,8 @@
 민수는 가상라이더_관악 콜 파일의 전업 라이더 R0297이다(가상). 2026-08-03(월)에는 10:31에 첫 콜을 받는다.
 그래서 11시에는 최근 2시간 이동이 60분에 못 미치고, 14시에는 넘는다. 7시대(06~09시)에는 일한 적이 없다.
 쉼이 20분을 넘으면 노출 누적이 0으로 돌아간다.
+
+연동 단계: svc는 C단계(플랫폼 연동, 평소 수입 기준)로 맞춰 둔다. 가입 직후 기본값인 A단계(정액)는 svc_a로 따로 본다.
 """
 import os
 import tempfile
@@ -12,6 +14,19 @@ import pytest
 
 @pytest.fixture()
 def svc(monkeypatch):
+    from backend import config, db, services
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
+    monkeypatch.setattr(config, "DB_PATH", tmp)
+    monkeypatch.setattr(config, "DEMO_MODE", True)
+    db.init()
+    services.demo_stage(1, "C")
+    yield services
+    os.remove(tmp)
+
+
+@pytest.fixture()
+def svc_a(monkeypatch):
+    """가입 직후 그대로: A단계(앱 단독, 정액)."""
     from backend import config, db, services
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
     monkeypatch.setattr(config, "DB_PATH", tmp)
@@ -135,3 +150,87 @@ def test_model_31_96_shows_32_0_but_is_not_paid(svc, monkeypatch):
     assert s["eligible"] is False
     rep = svc.report(LAT, LON, "14:00")
     assert all(d["temp"] == 32.0 and d["hot"] is False for d in rep["dongs"])
+
+
+# ----------------------------- 데이터 연동 단계 (지급은 정산 내역 기반) -----------------------------
+def test_new_rider_is_app_only_and_not_paid(svc_a):
+    """가입 직후(A): 조건은 그대로 판정해 보여주지만(모의 판정) 돈은 주지 않는다."""
+    r = svc_a.now_status(LAT, LON, "14:00")
+    assert r["pay_now"] is True and r["usual_hourly"] == 7_988       # 조건 판정은 단계와 상관없이 같다
+    assert (r["link"]["stage"], r["link"]["basis"], r["link"]["pays"], r["link"]["can_upload"]) == ("A", "none", False, True)
+    s = svc_a.rest_start(1, LAT, LON, "auto", "14:00")
+    assert s["eligible"] is False and s["mock_eligible"] is True and s["reasons"][0] == "정산 내역을 등록하면 받을 수 있어요"
+    cur = svc_a.rest_current(1, "14:25")
+    assert cur["amount"] == 0 and cur["eligible"] is False and "정산 내역" in cur["reason"]
+    done = svc_a.rest_stop(1, "14:55")
+    assert (done["paid_min"], done["amount"], done["basis"]) == (0, 0, "none")
+    h = svc_a.history(1, "15:00")
+    assert h["today_amount"] == 0 and h["today_left_rests"] == 4       # 못 받은 쉼은 하루 횟수에 안 든다
+
+
+def test_settlement_register_then_paid_usual_income(svc_a):
+    with pytest.raises(svc_a.ServiceError):
+        svc_a.settlement_upload(1, "  ", "14:00")              # 파일 없음
+    up = svc_a.settlement_upload(1, "가상_정산내역_민수.csv", "14:00")
+    assert (up["stage"], up["basis"], up["pays"], up["settle_status"], up["settle_name"], up["can_upload"]) == ("B", "usual", True, "pending", "대조 대기", False)
+    with pytest.raises(svc_a.ServiceError) as e:
+        svc_a.settlement_upload(1, "again.png", "14:01")
+    assert e.value.status == 409
+    s = svc_a.rest_start(1, LAT, LON, "auto", "14:05")
+    assert s["eligible"] is True and (s["basis"], s["pay_hourly"]) == ("usual", 7_988)
+    assert svc_a.rest_stop(1, "14:35")["amount"] == round(30 / 60 * 7_988)
+    assert svc_a.report(LAT, LON, "15:00")["verify"]["pending"] >= 1
+
+
+def test_settlement_summary_reads_usual_income(svc_a):
+    before = svc_a.settlement_summary(1, "14:00")
+    assert before["registered"] is False and before["virtual"] is True
+    svc_a.settlement_upload(1, "가상_정산내역_민수.csv", "14:00")
+    sm = svc_a.settlement_summary(1, "14:00")
+    assert sm["registered"] and sm["file"] == "가상_정산내역_민수.csv" and sm["status_name"] == "대조 대기"
+    assert [x["h"] for x in sm["hours"]] == list(range(6, 22))
+    assert (sm["usual_hourly"], sm["per_rest"]) == (7_988, 3_994)
+    assert sm["usual_hourly"] == svc_a.now_status(LAT, LON, "14:00")["usual_hourly"]   # 판정에 쓰는 값과 같다
+
+
+def test_stage_is_fixed_when_rest_starts(svc_a):
+    svc_a.rest_start(1, LAT, LON, "auto", "14:00")
+    with pytest.raises(svc_a.ServiceError) as e:
+        svc_a.demo_stage(1, "C")                                # 쉬는 중에는 못 바꾼다
+    assert e.value.status == 409
+    svc_a.settlement_upload(1, "a.png", "14:10")                # 쉬는 중 등록해도 이번 쉼은 시작할 때 기준(지급 없음)
+    assert svc_a.rest_stop(1, "14:30")["amount"] == 0
+    assert svc_a.rider_info(1)["stage"] == "B"
+
+
+def test_consent_recorded_once(svc_a):
+    assert svc_a.consent(1, "14:00")["consent"] is True
+    from backend import db
+    with db.conn() as c:
+        first = c.execute("SELECT consent_at FROM riders WHERE id=1").fetchone()[0]
+    svc_a.consent(1, "15:00")
+    with db.conn() as c:
+        assert c.execute("SELECT consent_at FROM riders WHERE id=1").fetchone()[0] == first
+
+
+def test_demo_stage_validates(svc):
+    assert svc.demo_stage(1, "A")["pays"] is False and svc.demo_stage(1, "B")["settle_status"] == "verified"
+    with pytest.raises(svc.ServiceError):
+        svc.demo_stage(1, "D")
+
+
+def test_report_stage_breakdown_keeps_plan_numbers(svc):
+    r = svc.report(LAT, LON, "15:30")
+    st = {s["stage"]: s for s in r["stages"]}
+    assert sum(s["riders"] for s in r["stages"]) == 1000 and set(st) == {"A", "B", "C"}
+    assert sum(s["amount"] for s in r["stages"]) == r["amount"]              # 단계별 합 = 오늘 지급 예정
+    assert (st["A"]["basis"], st["A"]["riders"], st["A"]["amount"]) == ("none", 0, 0)   # 가상 라이더는 모두 등록한 것으로 본다
+    assert st["B"]["basis"] == st["C"]["basis"] == "usual" and st["B"]["riders"] > st["C"]["riders"] > 0
+    # 정액이 없으니 여름 합계는 기획서 숫자(가상 1,000명, 절반이 쉼) 그대로다
+    assert sum(s["season"]["amount"] for s in r["stages"]) == r["season"]["amount"] == 114_185_957
+    assert r["verify"]["verified"] > r["verify"]["pending"] > r["verify"]["mismatch"] > 0
+
+
+def test_config_has_stages(svc):
+    c = svc.app_config()
+    assert [(s["stage"], s["pays"]) for s in c["stages"]] == [("A", False), ("B", True), ("C", True)] and "flat_hourly" not in c

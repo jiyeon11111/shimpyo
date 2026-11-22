@@ -165,13 +165,27 @@
       if (sc["1.0"] && sc["0.25"]) h += '<p class="note">자격이 될 때 ' + Math.round((se.rest_p || 0.5) * 100) + '%가 쉰다고 본 값이에요. 모두 쉬면 ' + won(sc["1.0"].amount) +
         ', 4분의 1만 쉬면 ' + won(sc["0.25"].amount) + '이에요.<sup>3</sup></p>';
     }
+    if (r.stages) {
+      h += '<div class="sec"><h2>데이터 연동 단계별</h2></div><p class="note">지급은 정산 내역 기반이에요. 정산 내역을 등록했거나(B) 플랫폼이 연동된(C) 라이더만 평소 시간당 수입으로 받고, 앱만 쓰는 라이더(A)는 알림과 모의 판정만 받아요.<sup>3</sup></p>' +
+        '<table class="stage-table"><thead><tr><th>단계</th><th>등록</th><th>오늘 받은 사람</th><th>오늘 지급 예정</th><th>여름 합계</th></tr></thead><tbody>' +
+        r.stages.map(function (s) {
+          var pays = s.basis !== "none";
+          return '<tr><td><b>' + s.stage + ' ' + esc(s.name) + '</b><small>' + (pays ? "평소 수입" : "지급 없음") + '</small></td><td>' + num(s.riders) + '명</td><td>' + (pays ? num(s.paid_riders) + "명" : "-") + '</td><td>' + (pays ? won(s.amount) : "-") + '</td><td>' + (pays && s.season ? won(s.season.amount) : "-") + '</td></tr>';
+        }).join("") + '</tbody></table>';
+      var v = r.verify || {};
+      h += '<div class="sec"><h2>정산 내역 사후 대조 (B단계)</h2></div>' +
+        '<div class="kpis verify"><div><span>대조 대기</span><b class="fig">' + num(v.pending || 0) + '<small>명</small></b></div>' +
+        '<div><span>확인 완료</span><b class="fig">' + num(v.verified || 0) + '<small>명</small></b></div>' +
+        '<div class="warn"><span>불일치</span><b class="fig">' + num(v.mismatch || 0) + '<small>명</small></b></div></div>' +
+        '<p class="note">라이더가 등록한 정산 내역을 앱 위치 기록과 한 달에 한 번 대조해요. 불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 기록이 자동으로 들어와 대조가 필요 없어요.' + (r.virtual ? ' 단계 배정(B 70%, C 30%)과 대조 상태는 시연용으로 지어낸 값이에요.' : '') + '</p>';
+    }
     h += '<div class="sec"><h2>오늘 못 쉰 시간이 많은 동</h2></div><ol class="read rank">' + top.map(function (d) {
       return '<li><b>' + esc(d.name) + '</b> ' + num(d.missed_hours) + '시간, 보전 ' + d.paid_hours + '시간 ' + won(d.amount) + '</li>';
     }).join("") + '</ol>';
     h += '<div class="sec"><h2>읽는 법</h2></div><ul class="read">' +
       '<li><b>체감온도</b>는 행정동 체감온도 모델 값이에요. ' + H + '도는 모델 값 전용 판정선(33도 − 모델 불확도)이에요.</li>' +
       '<li><b>못 쉰 위험 시간</b>은 그 시각 가장 오래 달린 동이 ' + H + '도 이상일 때 쉬지 않고 일한 라이더 시간의 합이에요. 많은 동부터 쉼터와 안내를 늘리면 돼요.</li>' +
-      '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
+      '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 평소 수입은 등록한 정산 내역이나 플랫폼 운행 기록으로 확인해요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
       '<li>보전 대상은 그 시간대에 최근 28일 중 12일 이상 일했고, 최근 2시간 배달 이동이 60분 이상이고, 쉬기 직전 1시간 가장 오래 달린 동이 ' + H + '도 이상인 라이더예요. 22~6시는 대상이 아니에요.</li>' +
       '<li>판정은 가장 오래 달린 동으로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul>';
     h += '<div class="sec"><h2>자료 출처</h2></div><ol class="src">' +

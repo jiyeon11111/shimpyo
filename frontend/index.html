@@ -4,26 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>쉼표</title>
-<meta name="theme-color" content="#1c2a24">
+<meta name="theme-color" content="#e2effc">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@600;700;800&display=swap">
+<link rel="preload" href="fonts/SpoqaHanSansNeo-Bold.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="app">
   <aside class="demo" id="demo" hidden aria-label="시연 조작">
-    <h2>시연 모드 <span class="note fig" id="demoDate"></span></h2>
+    <h2>시연 모드 <span class="note fig" id="demoDate"></span><button class="demo-x" id="demoHide" aria-label="시연 패널 숨기기">숨기기</button></h2>
     <div class="clock" id="clockT">14:00</div>
     <input type="range" id="clockR" min="540" max="1200" step="10" value="840" aria-label="시연 시각">
     <div class="ctrl">
       <button class="primary" id="play">재생</button>
       <button id="jump14">14시로</button>
       <button id="reset">오늘 기록 지우기</button>
+      <button id="toSplash">가입 화면부터</button>
     </div>
+    <h2>연동 단계</h2>
+    <div class="ctrl" id="stageCtl" role="group" aria-label="데이터 연동 단계">
+      <button data-stage="A" aria-pressed="false">A 앱만</button>
+      <button data-stage="B" aria-pressed="false">B 정산 내역</button>
+      <button data-stage="C" aria-pressed="false">C 플랫폼</button>
+    </div>
+    <p>A는 등록 전이라 돈이 안 쌓여요(모의 판정). B·C는 평소 수입만큼 쌓여요. 판정 조건은 같아요.</p>
     <a class="open-admin" href="admin.html" target="shimpyo-admin">지자체 화면 열기</a>
     <p>새 창으로 열어 옆에 두면 이 시각을 따라 같이 바뀌어요.</p>
     <p>쉼터, 지난 기록, 라이더 민수의 운행 기록·평소 수입, 지자체 화면의 라이더 1,000명은 시연용 가상 데이터입니다. 체감온도는 행정동 모델 값입니다.</p>
@@ -31,14 +37,18 @@
 
   <section class="phone" id="phone" aria-label="쉼표 앱">
     <div class="status fig"><span id="barTime">--:--</span><span id="barPlace"></span></div>
-    <div class="screen" id="screen"></div>
+    <div class="screen" id="screen"><div class="skel" aria-label="불러오는 중" role="status"><i class="s1"></i><i class="s2"></i><i class="s3"></i><i class="s4"></i></div></div>
     <nav class="dock" id="dock" role="tablist" hidden>
       <button role="tab" id="tab-home" data-v="home" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M3 12h2M19 12h2M4.2 17l1.7-1M18.1 8l1.7-1"/><circle cx="12" cy="12" r="4"/></svg>지금</button>
       <button role="tab" id="tab-shelter" data-v="shelter" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>쉼터</button>
       <button role="tab" id="tab-history" data-v="history" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>내역</button>
+      <button role="tab" id="tab-me" data-v="me" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.1-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>내 정보</button>
     </nav>
+    <div class="modal" id="modal" hidden></div>
   </section>
 </main>
+<input type="file" id="settleFile" accept="image/*,.pdf" hidden>
+<button class="demo-open" id="demoShow" hidden>시연 패널</button>
 <script src="logo.js"></script>
 <script src="app.js"></script>
 </body>

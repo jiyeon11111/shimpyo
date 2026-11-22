@@ -36,6 +36,22 @@ class RestStopIn(BaseModel):
     at: str | None = None
 
 
+class ConsentIn(BaseModel):
+    rider_id: int = 1
+    at: str | None = None
+
+
+class SettlementIn(BaseModel):
+    rider_id: int = 1
+    filename: str | None = None
+    at: str | None = None
+
+
+class DemoStageIn(BaseModel):
+    rider_id: int = 1
+    stage: str = "A"
+
+
 @app.get("/api/config")
 def get_config():
     return services.app_config()
@@ -79,6 +95,31 @@ def get_report(lat: float, lon: float, at: str | None = None):
 @app.get("/api/dongs")
 def get_dongs():
     return _call(services.dong_geo)
+
+
+@app.get("/api/rider")
+def get_rider(rider_id: int = 1):
+    return _call(services.rider_info, rider_id)
+
+
+@app.get("/api/settlement")
+def get_settlement(rider_id: int = 1, at: str | None = None):
+    return _call(services.settlement_summary, rider_id, at)
+
+
+@app.post("/api/consent")
+def post_consent(body: ConsentIn):
+    return _call(services.consent, body.rider_id, body.at)
+
+
+@app.post("/api/settlement")
+def post_settlement(body: SettlementIn):
+    return _call(services.settlement_upload, body.rider_id, body.filename, body.at)
+
+
+@app.post("/api/demo/stage")
+def post_demo_stage(body: DemoStageIn):
+    return _call(services.demo_stage, body.rider_id, body.stage)
 
 
 @app.post("/api/demo/reset")

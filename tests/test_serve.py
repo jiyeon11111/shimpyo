@@ -39,3 +39,17 @@ def test_admin_page_and_report(base):
     r = json.loads(_get(base + "/api/report?lat=37.4781&lon=126.9515&at=15:00"))
     assert len(r["dongs"]) == 21 and r["virtual"] is True and r["missed_hours"] >= 0
     assert len(json.loads(_get(base + "/api/dongs"))["features"]) == 21
+
+
+def test_stage_routes(base):
+    from urllib.request import Request
+    assert json.loads(_get(base + "/api/rider"))["stage"] == "A"
+    def post(path, body):
+        with urlopen(Request(base + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})) as r:
+            return json.loads(r.read().decode())
+    assert post("/api/consent", {"rider_id": 1})["consent"] is True
+    assert post("/api/settlement", {"rider_id": 1, "filename": "a.png"})["stage"] == "B"
+    assert json.loads(_get(base + "/api/settlement?at=14:00"))["usual_hourly"] == 7988
+    assert post("/api/demo/stage", {"stage": "C"})["stage"] == "C"
+    html = _get(base + "/")
+    assert 'id="stageCtl"' in html and 'id="settleFile"' in html
