@@ -704,3 +704,9 @@ body{line-height:1.6;letter-spacing:.01em}
 /* 쉬는 중: 폰 틀이 낮으면 체감온도 막대는 숨겨 시트와 겹치지 않게 한다 */
 @media (min-width:481px) and (max-height:980px){.ibars{display:none}}
 @media (max-width:480px) and (max-height:780px){.ibars{display:none}}
+/* 시작 화면: 로고는 오른쪽, 이름과 한 줄 소개는 왼쪽 (왼쪽에만 몰리지 않게) */
+.splash{position:relative}
+.splash canvas{position:absolute;right:8px;top:14px;width:96px}
+.splash h1{margin-top:30px}
+.splash .lead{padding-right:116px}
+.splash .how{margin-top:30px}
