@@ -239,7 +239,7 @@
     var used = done + (cur.paid_min > 0 ? 1 : 0);
     var segs = ""; for (var i = 0; i < times; i++) segs += '<i class="' + (i < done ? "full" : i < used ? "part" : "") + '"></i>';
     return '<div class="immersive">' +
-      '<header class="ibar"><span></span><h1>쉬는 중</h1><span></span></header>' +
+      '<header class="ibar"><span></span><h1>쉬는 중</h1><span></span></header>' + bannerH() +
       '<div class="ichip">' + cur.start.slice(11) + '부터, ' + (cur.place === "shelter" ? "쉼터에서 확인됨" : "자리 확인 중") + '</div>' +
       '<div class="ring"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="track"/>' +
       '<circle cx="110" cy="110" r="' + R + '" class="prog" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '"/>' +
@@ -342,11 +342,23 @@
       '<button class="bigbtn go" id="askKeep">계속 쉬기</button><button class="textbtn dim" id="askStop">그래도 끝내기</button></div>', "askKeep");
     bind("askKeep", closeInfo); bind("askStop", doStop);
   }
-  function render() {
-    var my = ++seq, v = S.view, p = pos();
-    share();
+  // 서버 응답이 느려도 화면이 멈추지 않게 한다: 그리는 중에 또 부르면 버리지 않고, 끝난 뒤 최신 상태로 한 번 더 그린다.
+  // (예전에는 새 요청이 올 때마다 앞 결과를 버려서, 응답이 시계 재생 간격보다 느리면 화면이 영영 안 바뀌었다.)
+  var drawing = false, again = false;
+  function clocks() {
     if (S.cfg && S.cfg.demo) { document.getElementById("clockT").textContent = hhmm(S.min); document.getElementById("clockR").value = S.min; }
     document.getElementById("barTime").textContent = S.cfg && S.cfg.demo ? hhmm(S.min) : new Date().toTimeString().slice(0, 5);
+  }
+  function render() {
+    clocks();
+    if (drawing) { again = true; return; }
+    drawing = true;
+    var done = function () { drawing = false; if (again) { again = false; render(); } };
+    renderNow().then(done, done);
+  }
+  function renderNow() {
+    var my = ++seq, v = S.view, p = pos();
+    share();
     var job, immersive = false;
     if (v === "splash") job = Promise.resolve(vSplash());
     else if (v === "register") job = Promise.resolve(vRegister());
@@ -450,7 +462,7 @@
     if (timer) return stop();
     if (ONBOARD[S.view]) S.view = "home";
     playBtn.textContent = "멈춤";
-    timer = setInterval(function () { if (S.min >= 1200) return stop(); setMin(S.min + 10); }, 700);
+    timer = setInterval(function () { if (drawing) return; if (S.min >= 1200) return stop(); setMin(S.min + 10); }, 700);   // 앞 화면을 다 그린 뒤에 다음 10분으로 넘어간다
   };
   document.getElementById("clockR").oninput = function (e) { setMin(+e.target.value); };
   document.getElementById("toSplash").onclick = function () { stop(); closeInfo(); S.done = null; S.from = null; S.view = "splash"; render(); };

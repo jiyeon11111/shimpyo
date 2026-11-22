@@ -6,6 +6,7 @@
 """
 import json
 import mimetypes
+import socket
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -86,10 +87,27 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+class DualStackServer(ThreadingHTTPServer):
+    """IPv6·IPv4를 함께 받는다. 윈도우에서 localhost가 ::1로 먼저 풀리는데 IPv4로만 열면
+    요청마다 연결이 늦어져(1~2초) 화면이 안 바뀌는 것처럼 보인다."""
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except (AttributeError, OSError):
+            pass
+        return super().server_bind()
+
+
 def main(port=int(os.getenv("PORT", "8000"))):
     db.init()
-    print(f"쉼표 서버: http://localhost:{port}  (시연 모드: {'켜짐' if config.DEMO_MODE else '꺼짐'})")
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    print(f"쉼표 서버: http://127.0.0.1:{port}  (시연 모드: {'켜짐' if config.DEMO_MODE else '꺼짐'})")
+    try:
+        srv = DualStackServer(("::", port), Handler)   # localhost(::1)와 127.0.0.1 둘 다 받는다
+    except OSError:
+        srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    srv.serve_forever()
 
 
 if __name__ == "__main__":
