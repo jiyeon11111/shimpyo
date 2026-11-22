@@ -244,15 +244,15 @@
       '<div class="ring"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="track"/>' +
       '<circle cx="110" cy="110" r="' + R + '" class="prog" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '"/>' +
       (counting ? '<circle cx="' + tx.toFixed(1) + '" cy="' + ty.toFixed(1) + '" r="5" class="tick' + (cur.rested_min >= Q.rest ? " on" : "") + '"/>' : '') + '</svg>' +
-      '<div class="ring-in"><b class="fig">' + mins(cur.rested_min) + '</b><span>' + (counting && cur.rested_min < Q.rest ? Q.rest + "분부터 쌓여요" : "쉬었어요") + '</span></div></div>' +
+      '<div class="ring-in"><b class="fig' + (cur.rested_min >= 60 ? " long" : "") + '">' + mins(cur.rested_min) + '</b><span>' + (counting && cur.rested_min < Q.rest ? Q.rest + "분부터 쌓여요" : "쉬었어요") + '</span></div></div>' +
       '<div class="earned"><span>지금까지</span><b class="fig">' + won(cur.amount) + '</b></div>' +
       (cur.eligible ? '<p class="ibasis">' + basisText(cur.basis, cur.pay_hourly) + ' 기준</p>' : '') +
       '<div class="ibars">' + bars(now, cur) + '</div>' +
       '<section class="sheet"><i class="grab"></i>' +
       '<p class="sheet-k">다음 적립</p><p class="sheet-v">' + msg + '</p>' +
+      '<button class="pillbtn light full" id="stopBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "끝내는 중" : "다 쉬었어요, 끝내기") + '</button>' +
       '<div class="segs">' + segs + '</div><p class="sheet-s fig">오늘 ' + used + '번 / ' + times + '번</p>' +
       (sh && sh.lat ? '<a class="sheet-link" target="_blank" rel="noopener" href="https://map.kakao.com/link/to/' + encodeURIComponent(sh.name) + ',' + sh.lat + ',' + sh.lon + '"><span><b>' + esc(sh.name) + '</b><small>걸어서 ' + sh.walk_min + '분, 길찾기</small></span>' + ic("chev", "chev") + '</a>' : '') +
-      '<button class="pillbtn light full" id="stopBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "끝내는 중" : "다 쉬었어요, 끝내기") + '</button>' +
       (S.cfg.demo ? '<p class="sheet-s center">시연 패널에서 시간을 옮겨 보세요</p>' : '<p class="sheet-s center">앱을 닫아도 계속 기록돼요</p>') +
       '</section></div>';
   }

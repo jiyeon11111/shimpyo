@@ -611,3 +611,11 @@ body{background:linear-gradient(180deg,#cfe1f3,#e3eef9 900px) no-repeat,#e3eef9}
 /* 쉬는 중: 끝내기 버튼은 늘 보이게 아래에 붙이고, 세로가 짧으면 링을 줄인다 */
 .sheet{position:sticky;bottom:0;z-index:2}
 @media (max-height:800px){.ring{width:164px;height:164px;margin-top:10px}.ring-in b{font-size:44px}.ibars{display:none}.earned{margin-top:10px}}
+/* 쉬는 중: 1시간을 넘기면 숫자를 줄여 원 안에 넣는다. 끝내기 버튼은 시트 맨 위쪽에 둔다(화면 맨 아래 끝에 붙으면 누르기 불편). */
+.ring-in b.long{font-size:34px;white-space:nowrap}
+.ring-in b.long small{font-size:15px;margin:0 3px 0 1px}
+.sheet{padding:10px 20px calc(26px + env(safe-area-inset-bottom,0px))}
+.sheet .pillbtn{margin-top:14px}
+.sheet .segs{margin-top:18px}
+@media (min-width:481px){.phone{height:min(780px,calc(100vh - 110px))}}
+@media (max-height:800px){.ring-in b.long{font-size:30px}}
