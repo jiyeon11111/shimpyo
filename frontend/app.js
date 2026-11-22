@@ -244,8 +244,10 @@
     var frac = counting ? Math.min(cur.rested_min, Q.cap) / Q.cap : 0, R = 92, C = 2 * Math.PI * R;
     var ta = 2 * Math.PI * Q.rest / Q.cap, tx = 110 + R * Math.cos(ta), ty = 110 + R * Math.sin(ta);   // 적립이 시작되는 20분 자리
     var sh = cur.place !== "shelter" && near && near.items.length ? near.items[0] : null;
-    var msg = !cur.eligible ? "이번 쉼은 적립 대상이 아니에요. " + esc(cur.reason || "") + ". 그래도 더우면 쉬어 가세요."
-      : done >= times ? "오늘 " + times + "번을 다 받았어요. 이제 끝내도 돼요."
+    // 적립 대상이 아니거나 오늘 횟수를 다 썼으면 맨 위 알림으로 알린다. 아래 한 줄은 다음 적립까지 남은 분만 말한다.
+    var notice = !cur.eligible ? ["이번 쉼은 돈이 쌓이지 않아요", esc(cur.reason || "") + ". 그래도 더우면 쉬어 가세요."]
+      : done >= times ? ["오늘 " + times + "번을 다 받았어요", "이번 쉼은 돈이 쌓이지 않아요. 편하게 쉬다 가세요."] : null;
+    var msg = !counting ? ""
       : cur.rested_min < Q.rest ? (Q.rest - cur.rested_min) + "분 더 쉬면 적립돼요"
       : cur.rested_min < Q.cap ? (Q.cap - cur.rested_min) + "분 더 쉬면 " + won(Math.min(Q.cap / 60 * cur.pay_hourly, Q.capWon)) + "까지 쌓여요"
       : "이번 쉼은 최대치를 채웠어요. 끝내도 돼요.";
@@ -253,21 +255,23 @@
     var segs = ""; for (var i = 0; i < times; i++) segs += '<i class="' + (i < done ? "full" : i < used ? "part" : "") + '"></i>';
     return '<div class="immersive">' +
       '<header class="ibar"><span></span><h1>쉬는 중</h1><span></span></header>' + bannerH() +
+      (notice ? '<div class="inotice" role="status">' + ic("info") + '<span><b>' + notice[0] + '</b>' + notice[1] + '</span></div>' : '') +
       '<div class="ichip">' + cur.start.slice(11) + '부터, ' + (cur.place === "shelter" ? "쉼터에서 확인됨" : "자리 확인 중") + '</div>' +
-      '<div class="ring"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="track"/>' +
+      // 원 전체가 끝내기 버튼이다
+      '<button class="ring" id="stopBtn"' + (S.busy ? " disabled" : "") + ' aria-label="' + cur.rested_min + '분 쉬었어요. 눌러서 쉼 끝내기">' +
+      '<svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="track"/>' +
       '<circle cx="110" cy="110" r="' + R + '" class="prog" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - frac)) + '"/>' +
       (counting ? '<circle cx="' + tx.toFixed(1) + '" cy="' + ty.toFixed(1) + '" r="5" class="tick' + (cur.rested_min >= Q.rest ? " on" : "") + '"/>' : '') + '</svg>' +
-      '<div class="ring-in"><b class="fig' + (cur.rested_min >= 60 ? " long" : "") + '">' + mins(cur.rested_min) + '</b><span>' + (counting && cur.rested_min < Q.rest ? Q.rest + "분부터 쌓여요" : "쉬었어요") + '</span></div></div>' +
+      '<span class="ring-in"><b class="fig' + (cur.rested_min >= 60 ? " long" : "") + '">' + mins(cur.rested_min) + '</b><em>' + (S.busy ? "끝내는 중" : "눌러서 끝내기") + '</em></span></button>' +
       '<div class="earned"><span>지금까지</span><b class="fig">' + won(cur.amount) + '</b></div>' +
       (cur.eligible ? '<p class="ibasis">' + basisText(cur.basis, cur.pay_hourly) + ' 기준</p>' : '') +
-      '<div class="ibars">' + bars(now, cur) + '</div>' +
-      '<section class="sheet"><i class="grab"></i>' +
-      '<p class="sheet-k">다음 적립</p><p class="sheet-v">' + msg + '</p>' +
-      '<button class="pillbtn light full" id="stopBtn"' + (S.busy ? " disabled" : "") + '>' + (S.busy ? "끝내는 중" : "다 쉬었어요, 끝내기") + '</button>' +
-      '<div class="segs">' + segs + '</div><p class="sheet-s fig">오늘 ' + used + '번 / ' + times + '번</p>' +
+      (msg ? '<p class="inext">' + msg + '</p>' : '') +
+      '<div class="iday"><div class="segs">' + segs + '</div><span class="fig">오늘 ' + used + '번 / ' + times + '번</span></div>' +
       (sh && sh.lat ? '<a class="sheet-link" target="_blank" rel="noopener" href="https://map.kakao.com/link/to/' + encodeURIComponent(sh.name) + ',' + sh.lat + ',' + sh.lon + '"><span><b>' + esc(sh.name) + '</b><small>걸어서 ' + sh.walk_min + '분, 길찾기</small></span>' + ic("chev", "chev") + '</a>' : '') +
-      (S.cfg.demo ? '<p class="sheet-s center">시연 패널에서 시간을 옮겨 보세요</p>' : '<p class="sheet-s center">앱을 닫아도 계속 기록돼요</p>') +
-      '</section></div>';
+      '<section class="card itemp" aria-label="오늘 체감온도"><div class="card-h"><b>오늘 체감온도</b>' +
+      '<span class="chip lite"><i style="background:' + heat(now.temp, now.hot) + '"></i>지금 ' + now.temp.toFixed(1) + '°</span></div>' + bars(now, cur) +
+      '<p class="card-s">줄무늬는 쉬고 있는 시간이에요.' + (S.cfg.demo ? '' : ' 앱을 닫아도 계속 기록돼요.') + '</p></section>' +
+      '</div>';
   }
 
   // ---------- 적립 완료 (몰입 화면) ----------

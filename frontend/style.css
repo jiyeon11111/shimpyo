@@ -702,8 +702,6 @@ body{line-height:1.6;letter-spacing:.01em}
 .splash .foot{position:sticky;bottom:-24px;margin:auto -22px -24px;padding:18px 22px 22px;gap:6px;background:linear-gradient(to top,var(--bg) 82%,transparent)}
 .onb .foot{position:sticky;bottom:-24px;margin:auto -22px -24px;padding:18px 22px 22px;background:linear-gradient(to top,var(--bg) 82%,transparent)}
 /* 쉬는 중: 폰 틀이 낮으면 체감온도 막대는 숨겨 시트와 겹치지 않게 한다 */
-@media (min-width:481px) and (max-height:980px){.ibars{display:none}}
-@media (max-width:480px) and (max-height:780px){.ibars{display:none}}
 /* 시작 화면: 로고는 오른쪽, 이름과 한 줄 소개는 왼쪽 (왼쪽에만 몰리지 않게) */
 .splash{position:relative}
 .splash canvas{position:absolute;right:8px;top:14px;width:96px}
@@ -714,3 +712,35 @@ body{line-height:1.6;letter-spacing:.01em}
 .splash h1,.splash .lead{padding-left:12px}
 .splash canvas{right:18px}
 .splash .agree{padding:0 12px}
+
+/* ---------- 쉬는 중 (2026-11-22 사용자 요청으로 다시 짬) ----------
+   원 전체가 끝내기 버튼이다. 아래 시트는 없애고 그 자리에 오늘 체감온도 막대를 둔다.
+   적립이 안 되는 쉼은 맨 위 알림으로 알린다. */
+.immersive{padding:12px 22px 24px}
+.inotice{display:flex;gap:10px;align-items:flex-start;background:color-mix(in srgb,var(--amber) 14%,#fff);border:1px solid color-mix(in srgb,var(--amber) 30%,#fff);border-radius:var(--r-lg);padding:14px 16px;margin:4px 0 10px;font-size:13px;color:#6b3a10;line-height:1.5;box-shadow:var(--shadow);animation:drop .45s cubic-bezier(.2,.8,.2,1) both}
+.inotice .ic{width:20px;height:20px;flex:none;color:var(--amber-d);margin-top:1px}
+.inotice b{display:block;font-size:15px;color:var(--ink);font-weight:400}
+@keyframes drop{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+button.ring{display:block;border:0;background:rgba(255,255,255,.55);border-radius:50%;padding:0;color:inherit;cursor:pointer;margin-top:22px;transition:transform .15s}
+button.ring:active{transform:scale(.97)}
+button.ring:disabled{opacity:.7}
+.ring-in{pointer-events:none}
+.ring-in em{font-style:normal;margin-top:10px;background:var(--forest);color:#fff;border-radius:999px;padding:6px 14px;font-size:13px}
+.earned{margin-top:20px}
+.inext{text-align:center;font-size:15px;margin-top:14px;color:var(--ink)}
+.iday{display:flex;align-items:center;gap:12px;margin-top:16px}
+.iday .segs{flex:1;margin:0}
+.iday span{font-size:13px;color:var(--mute);white-space:nowrap}
+.itemp{margin-top:22px}
+.immersive>.sheet-link{background:var(--glass)}
+.itemp .bars{height:64px;margin-top:16px}
+.itemp .bar b.pay{background:var(--ink)}
+.itemp .bar.now::before{background:var(--ink)}
+.itemp .bars-axis{color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.inotice{animation:none}}
+@media (max-height:800px){.ring-in em{margin-top:6px;padding:4px 12px}}
+button.ring{margin-top:16px}
+.immersive .earned{margin-top:16px}
+.itemp{margin-top:18px;padding:18px 20px}
+.itemp .bars{height:56px;margin-top:14px}
+.itemp .card-s{margin-top:10px}
