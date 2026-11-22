@@ -490,7 +490,7 @@
       start();
     } else start();
   }).catch(function () {
-    screen.innerHTML = '<div class="state"><b>연결되지 않아요</b><p>인터넷 연결을 확인하고 다시 시도해 주세요.</p><button class="pillbtn dark" id="retry">다시 시도</button></div>';
+    screen.innerHTML = '<div class="state"><b>서버에 연결되지 않아요</b><p>서버가 꺼져 있거나 켜지는 중이에요. 잠시 뒤 다시 시도해 주세요.</p><button class="pillbtn dark" id="retry">다시 시도</button></div>';
     document.getElementById("retry").onclick = function () { location.reload(); };
   });
   // 이미 위치 동의를 한 라이더는 시작 화면을 건너뛰고 바로 홈으로 간다

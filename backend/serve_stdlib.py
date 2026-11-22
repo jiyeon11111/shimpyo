@@ -7,6 +7,7 @@
 import json
 import mimetypes
 import socket
+import socketserver
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -97,16 +98,18 @@ class DualStackServer(ThreadingHTTPServer):
             self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
         except (AttributeError, OSError):
             pass
-        return super().server_bind()
+        # HTTPServer.server_bind는 여기서 호스트 이름을 역조회(getfqdn)하는데, 윈도우에서 "::"는 몇 초씩 걸린다. 건너뛴다.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = "localhost", self.server_address[1]
 
 
 def main(port=int(os.getenv("PORT", "8000"))):
     db.init()
-    print(f"쉼표 서버: http://127.0.0.1:{port}  (시연 모드: {'켜짐' if config.DEMO_MODE else '꺼짐'})")
     try:
         srv = DualStackServer(("::", port), Handler)   # localhost(::1)와 127.0.0.1 둘 다 받는다
     except OSError:
         srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    print(f"쉼표 서버 켜짐: http://127.0.0.1:{port}  (시연 모드: {'켜짐' if config.DEMO_MODE else '꺼짐'})  끄려면 Ctrl+C", flush=True)
     srv.serve_forever()
 
 
