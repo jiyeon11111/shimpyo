@@ -27,7 +27,7 @@
 pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000    # http://localhost:8000 , API 문서 /docs
 python -m backend.serve_stdlib                   # 설치 없이 같은 API (기본 라이브러리만)
-python -m pytest -q                              # 테스트 63개
+python -m pytest -q                              # 테스트 64개
 python -m analysis.gwanak_summer                  # 대시보드 집계 다시 만들기 (콜 파일 필요, 4~5분)
 ```
 
@@ -156,6 +156,9 @@ tests/
    - 쉬는 중 알림: 적립 시간이 끝나거나 하루 한도를 채우면 알린다.
 2. **실제 데이터 연결.**
    - 공공데이터포털 기상청 단기예보 인증키를 받아 `.env`에 넣는다.
+     - 2026-11-23에 팀이 키 네 개를 받았다(기상청 단기예보·영향예보, 행안부 무더위쉼터, 카카오). `.env` 이름은 `KMA_SERVICE_KEY`, `SAFETYDATA_SHELTER_KEY`, `KAKAO_REST_KEY`다. 키는 채팅이나 코드에 붙이지 않는다.
+     - `python -m scripts.check_keys`로 키가 맞는지 확인한다(키 값은 찍지 않는다). `python -m scripts.fetch_heat_shelters`는 관악구 무더위쉼터를 `data/raw/shelters_heat_gwanak.csv`로 받는다. 둘 다 실제 API로는 아직 돌려 보지 못했다(작성한 환경에서 외부 접속 불가).
+     - 영향예보는 요청주소를 확인하지 못해 앱에 연결하지 않았다. 11월에는 폭염 영향예보가 발표되지 않아 값도 없다.
    - 행안부 무더위쉼터와 지자체 이동노동자 쉼터 목록을 `data/raw/shelters.csv`에 넣는다(열: 쉼터명, 구분, 주소, 위도, 경도, 운영시간, 비고).
      - 서울 이동노동자 쉼터 30곳은 김아현이 좌표까지 만들어 팀 드라이브 '2차 보완_김아현'에 올렸다(`서울_이동노동자쉼터_30곳_좌표포함.csv`, 출처 서울노동포털 2026-11-22). 관악구 안에는 '관악 포레스트'(신림역, 24시간) 한 곳이다.
      - **`data/raw/shelters.csv`가 있으면 시연 모드에서도 가상 쉼터 대신 그 파일을 쓴다.** 발표(11/27) 전에는 넣지 않는다.

@@ -245,3 +245,14 @@ def test_rider_shelter_is_recognised_from_real_list_names():
     assert is_rider_shelter("성동 필수·플랫폼 노동자 쉼터", "자치구")
     assert is_rider_shelter("서울대입구역 이동노동자 쉼터", "라이더 쉼터")
     assert not is_rider_shelter("청룡동 주민센터 무더위쉼터", "무더위쉼터")
+
+
+def test_heat_shelter_row_is_converted_and_filtered_to_gwanak():
+    """무더위쉼터 응답 한 건을 앱 쉼터 형식으로 바꾸고, 좌표가 관악구 밖이면 버린다."""
+    from scripts.fetch_heat_shelters import to_app_row
+    inside = to_app_row({"RSTR_NM": "청룡동 경로당", "FCLTY_TY_NM": "노인시설", "RN_DTL_ADRES": "서울특별시 관악구 청룡길 1",
+                         "LA": "37.4781", "LO": "126.9515", "WKDAY_OPER_BEGIN_TIME": "0900", "WKDAY_OPER_END_TIME": "1800", "USE_PSBL_NMPR": 30})
+    assert inside["쉼터명"] == "청룡동 경로당" and inside["구분"] == "무더위쉼터(노인시설)"
+    assert inside["운영시간"] == "평일 09:00~18:00" and inside["위도"] == "37.478100"
+    assert to_app_row({"RSTR_NM": "강남 쉼터", "LA": "37.4979", "LO": "127.0276"}) is None      # 관악구 밖
+    assert to_app_row({"RSTR_NM": "좌표 없음", "LA": "", "LO": ""}) is None
