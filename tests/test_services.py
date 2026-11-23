@@ -256,3 +256,12 @@ def test_heat_shelter_row_is_converted_and_filtered_to_gwanak():
     assert inside["운영시간"] == "평일 09:00~18:00" and inside["위도"] == "37.478100"
     assert to_app_row({"RSTR_NM": "강남 쉼터", "LA": "37.4979", "LO": "127.0276"}) is None      # 관악구 밖
     assert to_app_row({"RSTR_NM": "좌표 없음", "LA": "", "LO": ""}) is None
+
+
+def test_heat_shelter_coords_reject_other_coordinate_systems():
+    """위경도가 아닌 좌표계(TM 등)는 버리고, 위도·경도가 바뀌어 들어오면 바로잡는다."""
+    from scripts.fetch_heat_shelters import latlon
+    assert latlon({"LA": "37.4781", "LO": "126.9515"}) == (37.4781, 126.9515)
+    assert latlon({"LA": "126.9515", "LO": "37.4781"}) == (37.4781, 126.9515)   # 뒤바뀐 경우
+    assert latlon({"LA": "195234.5", "LO": "451234.7"}) is None                  # TM 좌표
+    assert latlon({"LA": "", "LO": ""}) is None

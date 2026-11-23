@@ -28,17 +28,21 @@ OUT = os.path.join(config.RAW_DIR, "shelters_heat_gwanak.csv")
 SAMPLE = os.path.join(config.RAW_DIR, "shelters_heat_sample.json")
 PAGE = 1000
 
-# 앱 열 → 응답에서 찾아볼 항목 이름 후보(앞에서부터)
+# 앱 열 → 응답에서 찾아볼 항목 이름 후보(앞에서부터).
+# 2026-11-23 실제 응답에서 확인한 이름: RSTR_NM, DTL_ADRES, XCORD, LO, WKDAY_OPER_BEGIN_TIME,
+# WKDAY_OPER_END_TIME, USE_PSBL_NMPR, ARCD, YEAR (앞 14개만 봤다. LA/YCORD는 못 봤다)
 FIELDS = {
     "name": ["RSTR_NM", "RSTR_FCLTY_NM", "FCLTY_NM"],
-    "kind": ["FCLTY_TY_NM", "FCLTY_TY", "FCLTY_SCLAS_NM"],
+    "kind": ["FCLTY_TY_NM", "FCLTY_TY", "FCLTY_SCLAS_NM", "FCLTY_SE_NM"],
     "addr": ["RN_DTL_ADRES", "RN_ADRES", "DTL_ADRES", "ADRES", "RDNMADR"],
-    "lat": ["LA", "LAT", "YCRD"],
-    "lon": ["LO", "LOT", "XCRD"],
+    "lat": ["LA", "YCORD", "LAT", "YCRD"],
+    "lon": ["LO", "XCORD", "LOT", "XCRD"],
     "open": ["WKDAY_OPER_BEGIN_TIME", "WKDAY_OPN_TM"],
     "close": ["WKDAY_OPER_END_TIME", "WKDAY_END_TM"],
     "people": ["USE_PSBL_NMPR", "UTZTN_PSBLTY_TNOP"],
 }
+# 한국 위경도 범위. 이 밖이면 위경도가 아닌 다른 좌표계(TM 등)이므로 쓰지 않는다.
+LAT_RANGE, LON_RANGE = (33.0, 39.5), (124.0, 132.0)
 
 
 def pick(row: dict, key: str) -> str:
@@ -54,12 +58,25 @@ def hhmm(v: str) -> str:
     return f"{v[:2]}:{v[2:4]}" if len(v) >= 4 and v[:4].isdigit() else v
 
 
-def to_app_row(row: dict) -> dict | None:
-    """응답 한 건 → 앱 쉼터 목록 한 줄. 좌표가 없거나 관악구 밖이면 None."""
+def latlon(row: dict) -> tuple[float, float] | None:
+    """응답 한 건에서 위경도를 꺼낸다. 값이 한국 범위 밖이면(다른 좌표계) 뒤집힌 경우만 바로잡고, 그래도 아니면 None."""
     try:
         lat, lon = float(pick(row, "lat")), float(pick(row, "lon"))
     except ValueError:
         return None
+    if LAT_RANGE[0] <= lat <= LAT_RANGE[1] and LON_RANGE[0] <= lon <= LON_RANGE[1]:
+        return lat, lon
+    if LAT_RANGE[0] <= lon <= LAT_RANGE[1] and LON_RANGE[0] <= lat <= LON_RANGE[1]:
+        return lon, lat          # 위도·경도가 바뀌어 들어온 경우
+    return None
+
+
+def to_app_row(row: dict) -> dict | None:
+    """응답 한 건 → 앱 쉼터 목록 한 줄. 좌표가 없거나 관악구 밖이면 None."""
+    pos = latlon(row)
+    if not pos:
+        return None
+    lat, lon = pos
     if not gwanak.locate(lat, lon):
         return None
     o, c = hhmm(pick(row, "open")), hhmm(pick(row, "close"))
@@ -90,8 +107,12 @@ def main() -> None:
                 sys.exit(f"쉼터가 한 건도 안 왔어. 응답: {json.dumps(d, ensure_ascii=False)[:300].replace(key, '(키 가림)')}")
             with open(SAMPLE, "w", encoding="utf-8") as f:
                 json.dump(rows[0], f, ensure_ascii=False, indent=2)
-            if not pick(rows[0], "name") or not pick(rows[0], "lat"):
-                sys.exit(f"항목 이름이 예상과 달라. {SAMPLE} 을 열어 보고 FIELDS 의 후보를 고쳐 줘.\n항목: {', '.join(rows[0].keys())}")
+            if not pick(rows[0], "name"):
+                sys.exit(f"쉼터 이름 항목을 못 찾았어. {SAMPLE} 을 열어 보고 FIELDS['name'] 후보를 고쳐 줘.\n항목: {', '.join(rows[0].keys())}")
+            if not latlon(rows[0]):
+                sys.exit(f"위경도 항목을 못 찾았거나 값이 한국 범위 밖이야. {SAMPLE} 을 열어 보고 FIELDS 의 lat·lon 후보를 고쳐 줘.\n"
+                         f"지금 쓰는 후보: 위도 {FIELDS['lat']}, 경도 {FIELDS['lon']}\n항목: {', '.join(rows[0].keys())}")
+            print(f"좌표 항목 확인: 첫 건 {latlon(rows[0])}")
         seen += len(rows)
         out += [r for r in map(to_app_row, rows) if r]
         print(f"{page}쪽: 누적 {seen}건, 관악구 {len(out)}곳")

@@ -71,7 +71,10 @@ def check_shelter(key: str) -> tuple[bool, str]:
         if not rows:
             return False, f"쉼터가 한 건도 안 왔어. 응답 앞부분: {hide(body[:200], key)}"
         total = d.get("totalCount") or (d.get("header") or {}).get("totalCount") or "?"
-        return True, f"전국 {total}건 중 첫 건의 항목 이름: {', '.join(list(rows[0].keys())[:14])}"
+        keys = list(rows[0].keys())
+        coord = [k for k in keys if k in ("LA", "LO", "XCORD", "YCORD", "LAT", "LOT")]
+        return True, (f"전국 {total}건. 항목 {len(keys)}개 중 좌표로 보이는 것: {', '.join(coord) or '없음'}\n"
+                      f"          전체 항목: {', '.join(keys)}")
     except Exception:
         return False, f"HTTP {status}. 응답 앞부분: {hide(body[:200], key)}"
 
