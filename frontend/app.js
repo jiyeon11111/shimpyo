@@ -302,7 +302,7 @@
       '<div class="chips" role="group" aria-label="쉼터 종류"><button id="f-near" aria-pressed="' + (S.filter === "near") + '">전체</button><button id="f-rider" aria-pressed="' + (S.filter === "rider") + '">이동노동자 쉼터</button></div>' +
       (list.items.length ? '<div class="list">' + list.items.map(function (s) { return shelterRow(s, true); }).join("") + '</div>'
         : '<p class="empty">반경 안에 등록된 쉼터가 없어요. 아무 데서나 쉬기 시작해도 자리 확인 뒤 인정돼요.</p>') +
-      '<p class="note">쉼터 150m 안에서 쉬기 시작하면 바로 인정돼요.' + (list.virtual ? " 지금 목록은 시연용 예시예요. 실제 운영 때는 서울 열린데이터광장 무더위쉼터 목록을 써요." : " 자료: 서울 열린데이터광장 무더위쉼터.") + '</p>';
+      '<p class="note">쉼터 150m 안에서 쉬기 시작하면 바로 인정돼요.' + (list.virtual ? " 지금 목록은 시연용 예시예요. 실제 운영 때는 행정안전부 무더위쉼터 목록을 써요." : " 자료: 행정안전부 무더위쉼터 · 서울노동포털 이동노동자 쉼터.") + '</p>';
   }
 
   // ---------- 내역 ----------
@@ -500,6 +500,10 @@
       var p = cfg.demo_start.split(":"); S.min = +p[0] * 60 + +p[1];
       document.getElementById("demo").hidden = false;
       document.getElementById("demoDate").textContent = cfg.demo_date;
+      if (cfg.real_shelters) {
+        var dn = document.getElementById("demoNote");
+        if (dn) dn.textContent = "지난 기록, 라이더 민수의 운행 기록·평소 수입, 지자체 화면의 라이더 1,000명은 시연용 가상 데이터입니다. 쉼터 목록은 실제 공공데이터(행정안전부 무더위쉼터 · 서울노동포털 이동노동자 쉼터)입니다. 체감온도는 행정동 모델 값입니다.";
+      }
       start();
     } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function (g) { S.lat = g.coords.latitude; S.lon = g.coords.longitude; render(); },

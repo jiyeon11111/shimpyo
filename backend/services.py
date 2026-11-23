@@ -58,7 +58,8 @@ def app_config() -> dict:
             "heat_min": HEAT_MIN_C, "exposure_need_min": EXPOSURE_NEED_MIN, "rest_min": REST_MIN,
             "pay_cap_min": REST_PAY_CAP_MIN, "pay_cap_won": REST_PAY_CAP_WON, "daily_rests": DAILY_PAID_RESTS,
             "labor_need_days": LABOR_NEED_DAYS, "labor_window_days": LABOR_WINDOW_DAYS, "slots": [list(x) for x in SLOTS],
-            "stages": [{"stage": s, "name": STAGE_NAMES[s], "pays": s != "A"} for s in STAGES]}
+            "stages": [{"stage": s, "name": STAGE_NAMES[s], "pays": s != "A"} for s in STAGES],
+            "real_shelters": not shelters.is_virtual()}
 
 
 # ----------------------------- 데이터 연동 단계 -----------------------------

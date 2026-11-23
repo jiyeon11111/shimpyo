@@ -1,7 +1,8 @@
 __pycache__/
 *.db
 .env
-data/raw/
+data/raw/*
+!data/raw/shelters.csv
 data/sample/
 outputs/
 .venv/

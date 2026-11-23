@@ -90,10 +90,15 @@ def test_real_mode_does_not_judge(svc, monkeypatch):
     assert j["pay_now"] is False and j["has_record"] is False and j["reasons"] == [svc.NO_RECORD]
 
 
-def test_shelters_sorted_and_virtual(svc):
+def test_shelters_sorted_and_source_flag(svc):
+    """가까운 순으로 정렬하고, 실제 목록(data/raw/shelters.csv)이 있으면 가상 표시를 끈다."""
+    import os
+    from backend import config
     s = svc.shelter_list(LAT, LON)
     d = [x["distance_m"] for x in s["items"]]
-    assert s["virtual"] and d == sorted(d)
+    assert d == sorted(d)
+    real = os.path.exists(os.path.join(config.RAW_DIR, "shelters.csv"))
+    assert s["virtual"] is not real
     assert all(x["rider"] for x in svc.shelter_list(LAT, LON, "rider")["items"])
 
 

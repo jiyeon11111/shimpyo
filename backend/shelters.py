@@ -44,6 +44,11 @@ def _load() -> tuple[list[dict], bool]:
     return out, virtual
 
 
+def is_virtual() -> bool:
+    """지금 쓰는 목록이 가상 예시인지. 실제 목록(data/raw/shelters.csv)이 있으면 False."""
+    return _load()[1]
+
+
 def is_rider_shelter(name: str, kind: str) -> bool:
     """이동노동자(라이더) 쉼터인지. 구분 값이 파일마다 달라서(가상: '라이더 쉼터', 서울노동포털: '서울시 거점형'·'자치구' 등)
     이름과 구분을 함께 본다. 무더위쉼터(주민센터, 경로당 등)는 해당하지 않는다."""
