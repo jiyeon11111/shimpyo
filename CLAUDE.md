@@ -27,7 +27,7 @@
 pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000    # http://localhost:8000 , API 문서 /docs
 python -m backend.serve_stdlib                   # 설치 없이 같은 API (기본 라이브러리만)
-python -m pytest -q                              # 테스트 65개
+python -m pytest -q                              # 테스트 67개
 python -m analysis.gwanak_summer                  # 대시보드 집계 다시 만들기 (콜 파일 필요, 4~5분)
 ```
 
@@ -159,7 +159,9 @@ tests/
      - 2026-11-23에 팀이 키 네 개를 받았다(기상청 단기예보·영향예보, 행안부 무더위쉼터, 카카오). `.env` 이름은 `KMA_SERVICE_KEY`, `SAFETYDATA_SHELTER_KEY`, `KAKAO_REST_KEY`다. 키는 채팅이나 코드에 붙이지 않는다.
      - `python -m scripts.check_keys`로 키가 맞는지 확인한다(키 값은 찍지 않는다). 2026-11-23 사용자 컴퓨터에서 기상청 단기예보·무더위쉼터·카카오 로컬 세 개 모두 성공을 확인했다(무더위쉼터 전국 61,750건).
      - 무더위쉼터 응답 항목은 `RSTR_NM`(이름), `DTL_ADRES`(주소), `XCORD`·`LO`, `WKDAY_OPER_BEGIN_TIME`·`WKDAY_OPER_END_TIME`, `USE_PSBL_NMPR`, `ARCD`, `YEAR` 등이다(앞 14개만 확인). 좌표 항목이 `LA`/`LO`인지 `YCORD`/`XCORD`인지 확실하지 않아 `fetch_heat_shelters.py`는 두 쌍을 모두 시도하고, 값이 한국 위경도 범위 밖이면 버린다.
-     - `python -m scripts.fetch_heat_shelters`는 관악구 무더위쉼터를 `data/raw/shelters_heat_gwanak.csv`로 받는다. 아직 실제로 돌려 보지 못했다.
+     - `python -m scripts.fetch_heat_shelters`는 관악구 무더위쉼터를 `data/raw/shelters_heat_gwanak.csv`로 받는다. 2026-11-23에 돌려서 **관악구 138곳**(경로당 102, 공공시설 36)을 받았다. 운영시간이 없는 곳이 101곳인데, 원본에 값이 없어서다.
+     - 시설구분(`FCLTY_TY`) 공식 코드표를 못 찾아 관악구 데이터로 유추했다: 001 공공시설(주민센터·도서관·복지관), 003 경로당, 004 민간시설(새마을금고·교회). 전국에서도 같은지는 확인하지 못했다.
+     - **`gwanak.locate`는 경계 밖 1.5km까지 가까운 동으로 봐준다.** 라이더 위치 판정에서는 의도한 관대함이지만, 시설을 가릴 때 쓰면 옆 자치구가 섞인다(처음 받았을 때 312곳 중 174곳이 동작·금천·영등포구였다). 그런 곳에는 경계 안만 인정하는 `gwanak.inside`를 쓴다.
      - 영향예보는 요청주소를 확인하지 못해 앱에 연결하지 않았다. 11월에는 폭염 영향예보가 발표되지 않아 값도 없다.
    - 행안부 무더위쉼터와 지자체 이동노동자 쉼터 목록을 `data/raw/shelters.csv`에 넣는다(열: 쉼터명, 구분, 주소, 위도, 경도, 운영시간, 비고).
      - 서울 이동노동자 쉼터 30곳은 김아현이 좌표까지 만들어 팀 드라이브 '2차 보완_김아현'에 올렸다(`서울_이동노동자쉼터_30곳_좌표포함.csv`, 출처 서울노동포털 2026-11-22). 관악구 안에는 '관악 포레스트'(신림역, 24시간) 한 곳이다.

@@ -97,14 +97,26 @@ def _inside(lon: float, lat: float, ring: list) -> bool:
     return hit
 
 
-def locate(lat: float, lon: float) -> str | None:
-    """위치가 속한 관악구 동 코드. 경계 밖이면 1.5km 안의 가장 가까운 동 중심, 그것도 없으면 None."""
+def inside(lat: float, lon: float) -> str | None:
+    """경계 안에 있을 때만 관악구 동 코드. 밖이면 None.
+
+    `locate`는 경계 바로 밖의 라이더도 가까운 동으로 봐주지만, 이 함수는 봐주지 않는다.
+    어떤 시설이 관악구 것인지 가릴 때처럼 옆 자치구가 섞이면 안 되는 곳에서 쓴다.
+    """
     for f in geo()["features"]:
         g = f["geometry"]
         polys = g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
         for poly in polys:
             if _inside(lon, lat, poly[0]) and not any(_inside(lon, lat, hole) for hole in poly[1:]):
                 return f["properties"]["code"]
+    return None
+
+
+def locate(lat: float, lon: float) -> str | None:
+    """위치가 속한 관악구 동 코드. 경계 밖이면 1.5km 안의 가장 가까운 동 중심, 그것도 없으면 None."""
+    code = inside(lat, lon)
+    if code:
+        return code
     best = min(dongs().items(), key=lambda kv: (kv[1]["lat"] - lat) ** 2 + ((kv[1]["lon"] - lon) * math.cos(math.radians(lat))) ** 2)
     d = best[1]
     km = math.hypot(d["lat"] - lat, (d["lon"] - lon) * math.cos(math.radians(lat))) * 111

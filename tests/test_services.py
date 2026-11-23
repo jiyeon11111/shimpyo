@@ -250,9 +250,9 @@ def test_rider_shelter_is_recognised_from_real_list_names():
 def test_heat_shelter_row_is_converted_and_filtered_to_gwanak():
     """무더위쉼터 응답 한 건을 앱 쉼터 형식으로 바꾸고, 좌표가 관악구 밖이면 버린다."""
     from scripts.fetch_heat_shelters import to_app_row
-    inside = to_app_row({"RSTR_NM": "청룡동 경로당", "FCLTY_TY_NM": "노인시설", "RN_DTL_ADRES": "서울특별시 관악구 청룡길 1",
+    inside = to_app_row({"RSTR_NM": "청룡동 경로당", "FCLTY_TY": "003", "RN_DTL_ADRES": "서울특별시 관악구 청룡길 1",
                          "LA": "37.4781", "LO": "126.9515", "WKDAY_OPER_BEGIN_TIME": "0900", "WKDAY_OPER_END_TIME": "1800", "USE_PSBL_NMPR": 30})
-    assert inside["쉼터명"] == "청룡동 경로당" and inside["구분"] == "무더위쉼터(노인시설)"
+    assert inside["쉼터명"] == "청룡동 경로당" and inside["구분"] == "무더위쉼터 경로당"
     assert inside["운영시간"] == "평일 09:00~18:00" and inside["위도"] == "37.478100"
     assert to_app_row({"RSTR_NM": "강남 쉼터", "LA": "37.4979", "LO": "127.0276"}) is None      # 관악구 밖
     assert to_app_row({"RSTR_NM": "좌표 없음", "LA": "", "LO": ""}) is None
@@ -265,3 +265,28 @@ def test_heat_shelter_coords_reject_other_coordinate_systems():
     assert latlon({"LA": "126.9515", "LO": "37.4781"}) == (37.4781, 126.9515)   # 뒤바뀐 경우
     assert latlon({"LA": "195234.5", "LO": "451234.7"}) is None                  # TM 좌표
     assert latlon({"LA": "", "LO": ""}) is None
+
+
+def test_inside_gwanak_is_strict_but_locate_is_lenient():
+    """inside는 경계 안만 인정하고, locate는 경계 밖 가까운 곳도 봐준다.
+
+    무더위쉼터를 locate로 걸렀더니 312곳 중 174곳이 동작·금천·영등포구였다(2026-11-23).
+    """
+    from backend import gwanak
+    gwanak_office = (37.4781, 126.9515)                 # 관악구청
+    sadang = (37.486665, 126.972060)                    # 동작구 사당3동주민센터
+    siheung = (37.449553, 126.914819)                   # 금천구 시흥2동주민센터
+    assert gwanak.inside(*gwanak_office)
+    assert not gwanak.inside(*sadang)
+    assert not gwanak.inside(*siheung)
+    assert gwanak.locate(*gwanak_office) == gwanak.inside(*gwanak_office)
+    assert gwanak.locate(*sadang) is not None           # 경계 밖이지만 1.5km 안이라 봐준다
+    assert gwanak.locate(37.5665, 126.9780) is None     # 서울시청: 멀어서 None
+
+
+def test_heat_shelter_kind_code_becomes_a_name():
+    from scripts.fetch_heat_shelters import kind_name, to_app_row
+    assert kind_name("001") == "공공시설" and kind_name("003") == "경로당" and kind_name("004") == "민간시설"
+    assert kind_name("") == "구분 없음" and kind_name("009") == "코드 009"
+    row = to_app_row({"RSTR_NM": "청룡동 경로당", "FCLTY_TY": "003", "LA": "37.4781", "LO": "126.9515"})
+    assert row["구분"] == "무더위쉼터 경로당" and "운영시간 미제공" in row["비고"]

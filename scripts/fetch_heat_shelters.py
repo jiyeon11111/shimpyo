@@ -7,7 +7,9 @@
 - 출력: data/raw/shelters_heat_gwanak.csv (열: 쉼터명, 구분, 주소, 위도, 경도, 운영시간, 비고)
   data/raw/shelters.csv 로 바로 쓰지 않는다. 그 파일이 있으면 앱이 시연 모드에서도 가상 쉼터 대신 실제 쉼터를 쓴다.
   실제 모드로 바꿀 때 이동노동자 쉼터 파일과 합쳐서 shelters.csv 로 넣는다.
-- 관악구인지는 주소 글자가 아니라 좌표가 관악구 행정동 경계 안에 있는지로 가린다.
+- 관악구인지는 좌표가 관악구 행정동 경계 안인지로 가린다(`gwanak.inside`). `gwanak.locate`는 경계 밖 1.5km까지
+  봐주기 때문에 쓰면 동작구·금천구 시설이 섞인다(2026-11-23에 312곳 중 174곳이 옆 자치구였다).
+  주소의 자치구는 교차 확인용으로 함께 센다.
 - 전국 6만여 건이라 1,000건씩 받는다. 몇 분 걸린다.
 - 항목 이름은 2026-11-23에 공개 자료로 확인한 것(RSTR_NM, LA, LO, FCLTY_TY 등)이고, 실제 응답으로는 아직 확인하지 못했다.
   이름이 다르면 FIELDS 의 후보만 고친다. 첫 건의 원본은 data/raw/shelters_heat_sample.json 에 남긴다.
@@ -53,6 +55,15 @@ def pick(row: dict, key: str) -> str:
     return ""
 
 
+# 시설구분(FCLTY_TY) 코드. 공식 코드표를 못 찾아, 관악구 312곳의 쉼터 이름으로 유추했다(2026-11-23).
+# 001은 주민센터·도서관·복지관·체육센터, 003은 226곳이 "경로당", 004는 새마을금고·교회였다.
+KIND_NAMES = {"001": "공공시설", "003": "경로당", "004": "민간시설"}
+
+
+def kind_name(code: str) -> str:
+    return KIND_NAMES.get(code, f"코드 {code}" if code else "구분 없음")
+
+
 def hhmm(v: str) -> str:
     v = v.replace(":", "")
     return f"{v[:2]}:{v[2:4]}" if len(v) >= 4 and v[:4].isdigit() else v
@@ -77,14 +88,15 @@ def to_app_row(row: dict) -> dict | None:
     if not pos:
         return None
     lat, lon = pos
-    if not gwanak.locate(lat, lon):
+    if not gwanak.inside(lat, lon):
         return None
     o, c = hhmm(pick(row, "open")), hhmm(pick(row, "close"))
     people = pick(row, "people")
-    return {"쉼터명": pick(row, "name"), "구분": "무더위쉼터" + (f"({pick(row, 'kind')})" if pick(row, "kind") else ""),
+    return {"쉼터명": pick(row, "name"), "구분": "무더위쉼터 " + kind_name(pick(row, "kind")),
             "주소": pick(row, "addr"), "위도": f"{lat:.6f}", "경도": f"{lon:.6f}",
             "운영시간": f"평일 {o}~{c}" if o and c else "",
-            "비고": (f"이용 가능 {people}명 · " if people else "") + "출처 행정안전부 무더위쉼터"}
+            "비고": (f"이용 가능 {people}명 · " if people else "") + ("운영시간 미제공 · " if not (o and c) else "")
+                    + "출처 행정안전부 무더위쉼터"}
 
 
 def fetch(key: str, page: int) -> dict:
@@ -123,7 +135,14 @@ def main() -> None:
         w = csv.DictWriter(f, fieldnames=["쉼터명", "구분", "주소", "위도", "경도", "운영시간", "비고"])
         w.writeheader()
         w.writerows(out)
+    import collections
+    gu = collections.Counter(r["주소"].split()[1] if len(r["주소"].split()) > 1 else "(주소 없음)" for r in out)
     print(f"\n저장: {OUT} (관악구 {len(out)}곳)")
+    print(f"주소의 자치구: {', '.join(f'{k} {v}곳' for k, v in gu.most_common())}")
+    kinds = collections.Counter(r["구분"] for r in out)
+    print(f"시설 구분: {', '.join(f'{k} {v}곳' for k, v in kinds.most_common())}")
+    no_hours = sum(1 for r in out if not r["운영시간"])
+    print(f"운영시간이 없는 곳: {no_hours}곳")
 
 
 if __name__ == "__main__":
