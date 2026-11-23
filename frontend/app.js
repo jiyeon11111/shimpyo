@@ -86,7 +86,7 @@
   }
 
   function shelterRow(s, link) {
-    var rider = /라이더|이동노동자/.test(s.kind);
+    var rider = s.rider;   // 이동노동자 쉼터 여부는 서버가 정한다
     var inner = '<span class="thumb' + (rider ? " rider" : "") + '"><b class="fig">' + s.walk_min + '</b><small>분</small></span>' +
       '<span class="txt"><span class="name">' + esc(s.name) + '</span><span class="sub">' + (rider ? "이동노동자 쉼터" : esc(s.kind)) + (s.hours ? ", " + esc(s.hours) : "") + '</span>' +
       (s.distance_m <= 150 ? '<span class="tag">여기서 쉬면 바로 인정</span>' : '') + '</span>' + ic("chev", "chev");

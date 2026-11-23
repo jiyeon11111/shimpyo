@@ -27,7 +27,7 @@
 pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000    # http://localhost:8000 , API 문서 /docs
 python -m backend.serve_stdlib                   # 설치 없이 같은 API (기본 라이브러리만)
-python -m pytest -q                              # 테스트 62개
+python -m pytest -q                              # 테스트 63개
 python -m analysis.gwanak_summer                  # 대시보드 집계 다시 만들기 (콜 파일 필요, 4~5분)
 ```
 
@@ -157,6 +157,9 @@ tests/
 2. **실제 데이터 연결.**
    - 공공데이터포털 기상청 단기예보 인증키를 받아 `.env`에 넣는다.
    - 행안부 무더위쉼터와 지자체 이동노동자 쉼터 목록을 `data/raw/shelters.csv`에 넣는다(열: 쉼터명, 구분, 주소, 위도, 경도, 운영시간, 비고).
+     - 서울 이동노동자 쉼터 30곳은 김아현이 좌표까지 만들어 팀 드라이브 '2차 보완_김아현'에 올렸다(`서울_이동노동자쉼터_30곳_좌표포함.csv`, 출처 서울노동포털 2026-11-22). 관악구 안에는 '관악 포레스트'(신림역, 24시간) 한 곳이다.
+     - **`data/raw/shelters.csv`가 있으면 시연 모드에서도 가상 쉼터 대신 그 파일을 쓴다.** 발표(11/27) 전에는 넣지 않는다.
+     - 이동노동자 쉼터 여부는 서버가 이름과 구분으로 정한다(`shelters.is_rider_shelter`). 구분 값이 파일마다 달라서다.
    - 기상청 격자-행정구역 표를 `data/raw/kma_grid.csv`에 넣는다.
 3. **쉼터 밖 쉼 확인.** 일정 간격으로 위치를 받아 이동 거리를 비교하고, 멈춰 있으면 인정한다. 지금은 시연 모드에서 바로 인정한다.
 4. **분석 실제 데이터로 재실행.** `analysis/run_all.py`로 상한(30분치·하루 4번)을 확정하고 `engine/rules.py`·`engine/payout.py` 맨 위 숫자에 반영한다.

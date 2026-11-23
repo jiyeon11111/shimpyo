@@ -39,14 +39,23 @@ def _load() -> tuple[list[dict], bool]:
     out = [{"name": r[c["name"]], "kind": r.get(c["kind"], "무더위쉼터"), "addr": r.get(c["addr"], ""),
             "lat": float(r[c["lat"]]), "lon": float(r[c["lon"]]), "hours": r.get(c["hours"], ""), "note": r.get(c["note"], "")}
            for r in rows if r.get(c["lat"]) and r.get(c["lon"])]
+    for s in out:
+        s["rider"] = is_rider_shelter(s["name"], s["kind"])
     return out, virtual
+
+
+def is_rider_shelter(name: str, kind: str) -> bool:
+    """이동노동자(라이더) 쉼터인지. 구분 값이 파일마다 달라서(가상: '라이더 쉼터', 서울노동포털: '서울시 거점형'·'자치구' 등)
+    이름과 구분을 함께 본다. 무더위쉼터(주민센터, 경로당 등)는 해당하지 않는다."""
+    text = f"{name} {kind}"
+    return "라이더" in text or "노동자" in text
 
 
 def nearest(lat: float, lon: float, kind: str | None = None, limit: int = 10) -> dict:
     rows, virtual = _load()
     items = []
     for s in rows:
-        if kind == "rider" and "라이더" not in s["kind"]:
+        if kind == "rider" and not s["rider"]:
             continue
         d = haversine_m(lat, lon, s["lat"], s["lon"])
         items.append({**s, "distance_m": round(d), "walk_min": max(1, round(d / WALK_M_PER_MIN))})

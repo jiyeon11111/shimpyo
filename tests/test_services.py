@@ -94,7 +94,7 @@ def test_shelters_sorted_and_virtual(svc):
     s = svc.shelter_list(LAT, LON)
     d = [x["distance_m"] for x in s["items"]]
     assert s["virtual"] and d == sorted(d)
-    assert all("라이더" in x["kind"] for x in svc.shelter_list(LAT, LON, "rider")["items"])
+    assert all(x["rider"] for x in svc.shelter_list(LAT, LON, "rider")["items"])
 
 
 def test_report_gwanak_dongs(svc):
@@ -234,3 +234,14 @@ def test_report_stage_breakdown_keeps_plan_numbers(svc):
 def test_config_has_stages(svc):
     c = svc.app_config()
     assert [(s["stage"], s["pays"]) for s in c["stages"]] == [("A", False), ("B", True), ("C", True)] and "flat_hourly" not in c
+
+
+def test_rider_shelter_is_recognised_from_real_list_names():
+    """서울노동포털 목록은 구분이 '서울시 거점형'·'자치구'라서 이름까지 봐야 이동노동자 쉼터로 잡힌다."""
+    from backend.shelters import is_rider_shelter
+    assert is_rider_shelter("休서울이동노동자 서초쉼터", "서울시 거점형")
+    assert is_rider_shelter("강남구 이동노동자 쉼터(Alive Station) 1호점", "자치구")
+    assert is_rider_shelter("강북노동자복지관", "서울시 노동자지원시설")
+    assert is_rider_shelter("성동 필수·플랫폼 노동자 쉼터", "자치구")
+    assert is_rider_shelter("서울대입구역 이동노동자 쉼터", "라이더 쉼터")
+    assert not is_rider_shelter("청룡동 주민센터 무더위쉼터", "무더위쉼터")
