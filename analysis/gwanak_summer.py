@@ -14,7 +14,7 @@
 
 가정 (콜 기록에는 쉼 버튼 기록이 없다) — 팀 분석 4(김아현, team_scripts/run_final.py)와 같은 방식
   - 콜 로그는 "쉼표가 없을 때 평소처럼 일한 기록"이다. 쉬기 버튼을 누를 수 있는 순간은 배달을 마친 직후다.
-  - 배달을 마칠 때마다, 자격(가장 오래 달린 동 모델 32도 이상 + 그 시간대 28일 중 12일 이상 일함)이 되고
+  - 배달을 마칠 때마다, 자격(가장 오래 달린 동 모델 32도 이상 + 그 시간대 28일 중 10일 이상 일함)이 되고
     노출이 60분 이상이면 확률 P로 30분 쉰다고 본다. 쉬는 30분 동안은 다시 쉬지 않고, 쉰 뒤에는 그 뒤 이동만
     노출로 센다. 하루 최대 4번. 난수 seed=1, 순서는 라이더·날짜·시각 (팀 코드와 같다).
   - P 기본값은 0.5(기획서 "자격자의 절반이 쉼"). 1.0과 0.25 결과도 summary의 scenarios에 넣는다.
@@ -200,7 +200,7 @@ def main() -> None:
     h.to_csv(os.path.join(D, "dashboard_hot_2026.csv"), index=False, encoding="utf-8-sig")
     reasons = Counter({"쉼 기회(배달 완료)": len(o), "자격": int(o["자격"].sum()),
                        "체감온도 32도 미만": int((~o["체감온도"].fillna(-99).map(is_hot)).sum()),
-                       "일한 날 12일 미만": int((o["활동일"] < LABOR_NEED_DAYS).sum()),
+                       f"일한 날 {LABOR_NEED_DAYS}일 미만": int((o["활동일"] < LABOR_NEED_DAYS).sum()),
                        "22시~6시": int((~o["완료"].map(lambda t: slot_of(t) is not None)).sum())})
 
     paid = r[r["지급액"] > 0]
