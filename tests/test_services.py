@@ -134,7 +134,7 @@ def test_demo_reset(svc):
 def test_config_has_agreed_numbers(svc):
     c = svc.app_config()
     assert (c["heat_min"], c["exposure_need_min"], c["rest_min"], c["pay_cap_min"], c["pay_cap_won"], c["daily_rests"]) == (32.0, 60, 20, 30, 10_000, 4)
-    assert (c["labor_need_days"], c["labor_window_days"], len(c["slots"])) == (12, 28, 5)
+    assert (c["labor_need_days"], c["labor_window_days"], len(c["slots"])) == (10, 28, 5)
 
 
 def test_rest_start_auto_place(svc):

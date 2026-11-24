@@ -81,7 +81,7 @@ def test_31_96_is_not_hot_even_if_shown_as_32_0():
 
 
 def test_each_failed_condition_gives_reason():
-    d = judge_start(31.0, 11, steady(15, 25), AT)
+    d = judge_start(31.0, 9, steady(15, 25), AT)
     assert not d.pay_eligible and len(d.reasons) == 3
 
 
@@ -124,10 +124,10 @@ def test_ineligible_start_never_paid():
     assert r.amount == 0 and r.reason == "이유"
 
 
-def test_labor_needs_12_of_28_days():
-    assert judge_start(35.0, 12, steady(), AT).pay_eligible
-    d = judge_start(35.0, 11, steady(), AT)
-    assert not d.pay_eligible and "12~15시" in d.reasons[0] and "11일" in d.reasons[0]
+def test_labor_needs_10_of_28_days():
+    assert judge_start(35.0, 10, steady(), AT).pay_eligible
+    d = judge_start(35.0, 9, steady(), AT)
+    assert not d.pay_eligible and "12~15시" in d.reasons[0] and "9일" in d.reasons[0] and "10일이 필요" in d.reasons[0]
 
 
 def test_slots_and_night_not_eligible():
