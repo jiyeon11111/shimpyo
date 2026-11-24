@@ -140,12 +140,12 @@
     var me = r.dongs.filter(function (d) { return d.me; })[0], hot = r.dongs.filter(function (d) { return d.hot; }).length, H = r.heat_min;
     var h = '<p class="eyebrow">관악구 21개 동, ' + r.time.slice(0, 10) + '</p>' +
       '<h1 class="title">' + (r.missed_hours > 0 ? "오늘 체감 " + H + "도 넘는 시간에 쉬지 않고 일한 라이더 시간이 " + num(r.missed_hours) + "시간이에요"
-        : hot ? H + "도를 넘은 동이 " + hot + "곳이에요. 아직 못 쉰 시간은 없어요" : "지금은 모든 동이 " + H + "도 아래예요") + '</h1>';
+        : hot ? H + "도를 넘은 동이 " + hot + "곳이에요. 아직 폭염 속 운행 시간은 없어요" : "지금은 모든 동이 " + H + "도 아래예요") + '</h1>';
     h += '<div class="kpis">' +
       '<div><span>지금 쉬는 라이더</span><b class="fig">' + r.resting + '<small>명</small></b></div>' +
       '<div><span>오늘 보전 시간</span><b class="fig">' + r.paid_hours + '<small>시간</small></b></div>' +
       '<div><span>오늘 지급 예정<sup>3</sup></span><b class="fig amt">' + won(r.amount) + '</b></div>' +
-      '<div class="warn"><span>못 쉰 위험 시간</span><b class="fig">' + num(r.missed_hours) + '<small>시간</small></b></div></div>';
+      '<div class="warn"><span>폭염 속 운행 시간</span><b class="fig">' + num(r.missed_hours) + '<small>시간</small></b></div></div>';
     h += '<div class="admin-body"><section class="hero admin-map" aria-label="행정동별 체감온도">' +
       '<div class="hero-top"><span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도, " + esc(me.stage) + " 단계") : "관악구") + '</span>' +
       '<span class="hero-time fig">' + H + '도 이상 ' + hot + '곳 / 21곳<sup>1·2</sup></span></div>' +
@@ -160,7 +160,7 @@
         '<div class="kpis season"><div><span>보전 인원</span><b class="fig">' + num(se.paid_riders) + '<small>명</small></b></div>' +
         '<div><span>보전 시간</span><b class="fig">' + num(se.paid_hours) + '<small>시간</small></b></div>' +
         '<div><span>지급액</span><b class="fig amt">' + won(se.amount) + '</b></div>' +
-        '<div class="warn"><span>못 쉰 위험 시간</span><b class="fig">' + num(Math.round(se.missed_hours)) + '<small>시간</small></b></div></div>';
+        '<div class="warn"><span>폭염 속 운행 시간</span><b class="fig">' + num(Math.round(se.missed_hours)) + '<small>시간</small></b></div></div>';
       var sc = se.scenarios || {};
       if (sc["1.0"] && sc["0.25"]) h += '<p class="note">자격이 될 때 ' + Math.round((se.rest_p || 0.5) * 100) + '%가 쉰다고 본 값이에요. 모두 쉬면 ' + won(sc["1.0"].amount) +
         ', 4분의 1만 쉬면 ' + won(sc["0.25"].amount) + '이에요.<sup>3</sup></p>';
@@ -179,12 +179,12 @@
         '<div class="warn"><span>불일치</span><b class="fig">' + num(v.mismatch || 0) + '<small>명</small></b></div></div>' +
         '<p class="note">라이더가 등록한 정산 내역을 앱 위치 기록과 한 달에 한 번 대조해요. 불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 기록이 자동으로 들어와 대조가 필요 없어요.' + (r.virtual ? ' 단계 배정(B 70%, C 30%)과 대조 상태는 시연용으로 지어낸 값이에요.' : '') + '</p>';
     }
-    h += '<div class="sec"><h2>오늘 못 쉰 시간이 많은 동</h2></div><ol class="read rank">' + top.map(function (d) {
+    h += '<div class="sec"><h2>오늘 폭염 속 운행 시간이 많은 동</h2></div><ol class="read rank">' + top.map(function (d) {
       return '<li><b>' + esc(d.name) + '</b> ' + num(d.missed_hours) + '시간, 보전 ' + d.paid_hours + '시간 ' + won(d.amount) + '</li>';
     }).join("") + '</ol>';
     h += '<div class="sec"><h2>읽는 법</h2></div><ul class="read">' +
       '<li><b>체감온도</b>는 행정동 체감온도 모델 값이에요. ' + H + '도는 모델 값 전용 판정선(33도 − 모델 불확도)이에요.</li>' +
-      '<li><b>못 쉰 위험 시간</b>은 그 시각 가장 오래 달린 동이 ' + H + '도 이상일 때 쉬지 않고 일한 라이더 시간의 합이에요. 많은 동부터 쉼터와 안내를 늘리면 돼요.</li>' +
+      '<li><b>폭염 속 운행 시간</b>은 그 시각 가장 오래 달린 동이 ' + H + '도 이상일 때 쉬지 않고 일한 라이더 시간의 합이에요. 많은 동부터 쉼터와 안내를 늘리면 돼요.</li>' +
       '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 평소 수입은 등록한 정산 내역이나 플랫폼 운행 기록으로 확인해요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
       '<li>보전 대상은 그 시간대에 최근 28일 중 12일 이상 일했고, 최근 2시간 배달 이동이 60분 이상이고, 쉬기 직전 1시간 가장 오래 달린 동이 ' + H + '도 이상인 라이더예요. 22~6시는 대상이 아니에요.</li>' +
       '<li>판정은 가장 오래 달린 동으로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul>';

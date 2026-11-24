@@ -59,7 +59,7 @@ data/gwanak/ 관악구 팀 데이터: 행정동 체감온도 모델, 가상 라�
 | POST | `/api/rest/stop` | 쉼 종료, 정산 후 저장 |
 | GET | `/api/history` | 오늘 기록, 오늘 받은 돈·남은 횟수, 이번 달 합계, 최근 7일 |
 | GET | `/api/shelters?lat&lon&kind=rider` | 가까운 쉼터 |
-| GET | `/api/report?lat&lon` | 지자체·보험사용: 관악구 21개 동 체감온도·보전 시간·지급액·못 쉰 위험 시간, 2026 여름 합계 |
+| GET | `/api/report?lat&lon` | 지자체·보험사용: 관악구 21개 동 체감온도·보전 시간·지급액·폭염 속 운행 시간, 2026 여름 합계 |
 | GET | `/api/dongs` | 관악구 행정동 경계와 중심 좌표 (지도용) |
 | POST | `/api/demo/reset` | 시연 날짜에 눌러 만든 기록 지우기 |
 

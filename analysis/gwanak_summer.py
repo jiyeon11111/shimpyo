@@ -9,7 +9,7 @@
 
 출력 (git에 올리는 결과만)
   - dashboard_rests_2026.csv    적립 대상으로 판정된 쉼 한 건이 한 행 (지급액 0인 경우 포함)
-  - dashboard_hot_2026.csv      날짜·시·동별 "32도 이상에서 일한 라이더 분" (못 쉰 위험 시간)
+  - dashboard_hot_2026.csv      날짜·시·동별 "32도 이상에서 일한 라이더 분" (폭염 속 운행 시간)
   - dashboard_summary_2026.json 여름 합계, 판정 이유별 건수, 동별·월별 합계
 
 가정 (콜 기록에는 쉼 버튼 기록이 없다) — 팀 분석 4(김아현, team_scripts/run_final.py)와 같은 방식
@@ -21,7 +21,7 @@
   - 금액 = min(평소 시간당 수입, 2만 원) × 30 ÷ 60 (engine.payout.settle_rest). 팀 분석은 2만 원 상한 없이 계산했다.
   - 노출·가장 오래 달린 동은 engine/rules.py, 일한 날·평소 수입은 engine/records.py 정의를 따른다.
   - 집계 기간은 2026-05-15~09-30. 그 전(04-18~05-14) 기록은 노동 확인과 평소 수입 계산에만 쓴다.
-  - 못 쉰 위험 시간: 일한 구간(콜을 20분 이내 공백으로 이은 것)의 분을 시각(정시~정시)별로 나눠,
+  - 폭염 속 운행 시간: 일한 구간(콜을 20분 이내 공백으로 이은 것)의 분을 시각(정시~정시)별로 나눠,
     그 1시간 동안 가장 오래 달린 동의 모델 체감온도가 32도 이상이면 센다.
 """
 from __future__ import annotations
@@ -76,7 +76,7 @@ def in_season(d: date) -> bool:
 
 
 def rider_season(book: RiderBook, rid: str, opps: list, hot: dict) -> None:
-    """배달 완료 순간(쉼 기회)마다 판정 재료를 opps에 쌓고, 못 쉰 위험 시간을 hot에 더한다."""
+    """배달 완료 순간(쉼 기회)마다 판정 재료를 opps에 쌓고, 폭염 속 운행 시간을 hot에 더한다."""
     gap = timedelta(minutes=RESET_GAP_MIN)
     for day in sorted(book.by_day):
         if not in_season(day):
@@ -97,7 +97,7 @@ def rider_season(book: RiderBook, rid: str, opps: list, hot: dict) -> None:
             temp = gwanak.temp(code, c.done)
             opps.append((rid, day, at, c.done, expo, float(cum[mi + 1]), code, temp,
                          book.worked_days(c.done), book.usual_hourly(c.done)))
-        # 못 쉰 위험 시간: 일한 구간(20분 이내 공백으로 이은 콜)을 시각별로 나눠 그 시각 가장 오래 달린 동이 32도 이상이면 센다
+        # 폭염 속 운행 시간: 일한 구간(20분 이내 공백으로 이은 콜)을 시각별로 나눠 그 시각 가장 오래 달린 동이 32도 이상이면 센다
         s, e = cs[0].accept, cs[0].done
         for c in cs[1:] + [None]:
             if c is not None and c.accept - e <= gap:
