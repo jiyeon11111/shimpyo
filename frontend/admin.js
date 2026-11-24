@@ -15,6 +15,9 @@
   // 색: 32도 구간은 서버가 반올림 전 값으로 정한 hot을 쓴다 (화면의 32.0이 31.96일 수 있다)
   // 밝은 카드 위에서 읽히도록 채도를 낮춘 단계. 진한 쪽일수록 더움
   var HEAT = ["#C2410C", "#E8703A", "#F59E4B", "#FBC877", "#FDE39B", "#F3EBD8", "#DCE8F3"];
+  // 시연 모드에서 지어낸 값으로 그리는 카드에 붙이는 표시. 서버의 report().virtual을 그대로 쓴다
+  function sim(r) { return r.virtual ? '<span class="pill-s sim">가상</span>' : ""; }
+
   function heat(t, hot) {
     if (t == null) return HEAT[6];
     if (t >= 38) return HEAT[0];
@@ -254,12 +257,13 @@
       var pay = r.stages.filter(function (x) { return x.basis !== "none"; });
       var parts = pay.map(function (x, i) { return { label: x.stage, value: (x.season && x.season.amount) || x.amount || 0, color: i ? "var(--sky)" : "var(--amber)" }; });
       var tot = parts.reduce(function (a, p) { return a + p.value; }, 0);
-      h += '<section class="dcard c3"><div class="dtop"><h2>단계별 지급 비중</h2></div>' +
+      h += '<section class="dcard c3"><div class="dtop"><h2>단계별 지급 비중</h2>' + sim(r) + '</div>' +
         '<div class="dcenter">' + donutSvg(parts, num(r.stages.reduce(function (a, x) { return a + x.riders; }, 0)) + "명", "등록 라이더") + '</div>' +
         '<ul class="dlist">' + pay.map(function (x, i) {
           var amt = (x.season && x.season.amount) || x.amount || 0;
           return '<li><i style="background:' + (i ? "var(--sky)" : "var(--amber)") + '"></i><span>' + x.stage + ' ' + esc(x.name) + '</span><b>' + (tot ? Math.round(amt / tot * 100) : 0) + '%</b></li>';
-        }).join("") + '<li><i style="background:var(--line)"></i><span>A 앱만 사용</span><b>지급 없음</b></li></ul></section>';
+        }).join("") + '<li><i style="background:var(--line)"></i><span>A 앱만 사용</span><b>지급 없음</b></li></ul>' +
+        (r.virtual ? '<p class="note foot">아직 쌓인 실적이 없어 단계 비율을 가정한 값이에요. 2027년 시범은 A·B단계만 비교해요.</p>' : '') + '</section>';
     }
 
     h += '</div>';   // 윗줄 끝
@@ -293,14 +297,15 @@
         '</div><p class="note foot">폭염 속 운행 시간 중 쉼표로 보전된 비율이에요<sup>3</sup></p></section>';
     }
 
-    var sVerify = '<section class="dcard"><div class="dtop"><h2>정산 내역 사후 대조</h2><span class="pill-s">B단계</span></div>' +
+    var sVerify = '<section class="dcard"><div class="dtop"><h2>정산 내역 대조</h2><span class="dtop-pills"><span class="pill-s">B단계</span>' + sim(r) + '</span></div>' +
       '<div class="dcenter">' + donutSvg([
         { value: v.verified || 0, color: "var(--sky)" }, { value: v.pending || 0, color: "var(--line)" }, { value: v.mismatch || 0, color: "var(--ember)" }
       ], num(v.mismatch || 0) + "건", "불일치") + '</div>' +
       '<ul class="dlist"><li><i style="background:var(--sky)"></i><span>확인 완료</span><b>' + num(v.verified || 0) + '명</b></li>' +
       '<li><i style="background:var(--line)"></i><span>대조 대기</span><b>' + num(v.pending || 0) + '명</b></li>' +
       '<li><i style="background:var(--ember)"></i><span>불일치</span><b>' + num(v.mismatch || 0) + '명</b></li></ul>' +
-      '<p class="note foot">불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 대조가 필요 없어요.</p></section>';
+      '<p class="note foot">' + (r.virtual ? '대조 결과는 가정한 값이에요. ' : '') +
+      '불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 대조가 필요 없어요.</p></section>';
 
     var slots = [[6, 9], [9, 12], [12, 15], [15, 18], [18, 22]];
     var byslot = slots.map(function (sl) {

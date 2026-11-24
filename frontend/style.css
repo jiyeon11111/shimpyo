@@ -834,3 +834,6 @@ details.fold>ul,details.fold>ol{margin:0;padding:0 18px 16px 34px}
 .dcard.map .legend{color:var(--mute)}
 .dcard.map .legend span{color:var(--mute)}
 .dcard.map .chip{background:var(--bg);color:var(--ink)}
+/* 지어낸 값으로 그리는 카드 표시 (아현 2차 보완 지적 1번) */
+.pill-s.sim{background:#FBE7DF;color:#9C4A2E;font-size:11px;padding:3px 8px}
+.dtop-pills{display:flex;align-items:center;gap:6px;flex:none}
