@@ -295,3 +295,21 @@ def test_heat_shelter_kind_code_becomes_a_name():
     assert kind_name("") == "구분 없음" and kind_name("009") == "코드 009"
     row = to_app_row({"RSTR_NM": "청룡동 경로당", "FCLTY_TY": "003", "LA": "37.4781", "LO": "126.9515"})
     assert row["구분"] == "무더위쉼터 경로당" and "운영시간 미제공" in row["비고"]
+
+
+def test_dashboard_hours_match_the_resting_count(svc):
+    """시간별 추이의 '지금 시각' 칸은 KPI의 지금 쉬는 라이더 수와 같아야 한다.
+    진행 중인 쉼을 현재 시각으로 잘라 넘기면 정각에 쉬는 사람이 빠진다(한 번 겪은 버그)."""
+    r = svc.report(LAT, LON)
+    hours = {h["hour"]: h for h in r["hours"]}
+    assert hours[r["now_hour"]]["resting"] == r["resting"]
+    assert [h["hour"] for h in r["hours"]] == sorted(h["hour"] for h in r["hours"])
+    assert all(h["resting"] == 0 and h["amount"] == 0 for h in r["hours"] if h["hour"] > r["now_hour"])
+
+
+def test_dashboard_counts_shelters_inside_each_dong(svc):
+    """조치가 필요한 동에 붙는 쉼터 수는 경계 안만 센다."""
+    from backend import shelters
+    n = shelters.count_by_dong()
+    assert sum(n.values()) == len([s for s in shelters._load()[0]])
+    assert all(c in {d["code"] for d in svc.report(LAT, LON)["dongs"]} for c in n)

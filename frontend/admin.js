@@ -13,7 +13,16 @@
   function num(x) { return (+x).toLocaleString("ko-KR"); }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   // 색: 32도 구간은 서버가 반올림 전 값으로 정한 hot을 쓴다 (화면의 32.0이 31.96일 수 있다)
-  function heat(t, hot) { return t == null ? "var(--cool)" : t >= 38 ? "var(--ember)" : t >= 35 ? "var(--amber)" : hot ? "var(--sun)" : t >= 31 ? "var(--warm)" : "var(--cool)"; }
+  function heat(t, hot) {
+    if (t == null) return "var(--cool)";
+    if (t >= 38) return "#a82c0c";
+    if (t >= 36.5) return "var(--ember)";
+    if (t >= 35) return "var(--amber)";
+    if (t >= 33.5) return "#f5a83a";
+    if (hot) return "var(--sun)";
+    if (t >= 31) return "var(--warm)";
+    return "var(--cool)";
+  }
   function api(path, params) {
     if (S.cfg.demo) params.at = hhmm(S.min);
     var qs = Object.keys(params).map(function (k) { return k + "=" + encodeURIComponent(params[k]); }).join("&");
@@ -136,6 +145,57 @@
     }
   }
 
+
+  // 오늘 시간별 추이: 막대는 폭염 속 운행 시간, 점·선은 그 시각에 쉬고 있던 라이더
+  function trendSvg(r) {
+    var hs = r.hours || [];
+    if (!hs.length) return "";
+    var W = 920, H = 200, L = 46, R = 44, T = 16, B = 30;
+    var iw = W - L - R, ih = H - T - B, n = hs.length, bw = iw / n;
+    var rawHot = Math.max(1, Math.max.apply(null, hs.map(function (x) { return x.hot_hours; })));
+    var step = Math.pow(10, Math.floor(Math.log(rawHot) / Math.LN10)) / 2;   // 눈금을 읽기 좋은 수로 올린다
+    var maxHot = Math.ceil(rawHot / step) * step;
+    var maxRest = Math.max(1, Math.max.apply(null, hs.map(function (x) { return x.resting; })));
+    var now = r.now_hour, out = "";
+    // 가로 눈금
+    [0, 0.5, 1].forEach(function (f) {
+      var y = T + ih - ih * f;
+      out += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="#e7eef6" stroke-width="1"/>' +
+        '<text x="' + (L - 8) + '" y="' + (y + 5) + '" text-anchor="end" font-size="12" fill="#8fa2b8">' + Math.round(maxHot * f) + '</text>';
+    });
+    // 막대
+    hs.forEach(function (x, i) {
+      var bh = ih * (x.hot_hours / maxHot), bx = L + i * bw + bw * 0.18, by = T + ih - bh;
+      var future = x.hour > now;
+      if (bh > 0.5) out += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) +
+        '" height="' + bh.toFixed(1) + '" rx="3" fill="' + (future ? "#f3d9c4" : x.hour === now ? "var(--ember)" : "var(--amber)") + '"/>';
+    });
+    // 쉬는 라이더 선
+    var pts = hs.map(function (x, i) {
+      return [L + i * bw + bw / 2, T + ih - ih * (x.resting / maxRest)];
+    });
+    var upto = pts.filter(function (_, i) { return hs[i].hour <= now; });
+    if (upto.length > 1) out += '<polyline fill="none" stroke="var(--sky)" stroke-width="2.5" stroke-linejoin="round" points="' +
+      upto.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ") + '"/>';
+    upto.forEach(function (p, i) {
+      if (hs[i].resting > 0) out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="var(--sky)"/>';
+    });
+    // 지금 시각
+    var ni = hs.map(function (x) { return x.hour; }).indexOf(now);
+    if (ni >= 0) {
+      var nx = L + ni * bw + bw / 2;
+      out += '<line x1="' + nx.toFixed(1) + '" y1="' + T + '" x2="' + nx.toFixed(1) + '" y2="' + (T + ih) + '" stroke="var(--ember)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".7"/>';
+    }
+    // 시각 눈금
+    hs.forEach(function (x, i) {
+      if (x.hour % 3 !== 0) return;
+      out += '<text x="' + (L + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="12" fill="#8fa2b8">' + x.hour + '시</text>';
+    });
+    // 오른쪽 축: 쉬는 라이더
+    out += '<text x="' + (W - R + 8) + '" y="' + (T + 5) + '" font-size="12" fill="var(--sky)">' + maxRest + '명</text>';
+    return '<svg class="trend" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="오늘 시간별 폭염 속 운행 시간과 쉬는 라이더 수">' + out + '</svg>';
+  }
+
   function view(r) {
     var me = r.dongs.filter(function (d) { return d.me; })[0], hot = r.dongs.filter(function (d) { return d.hot; }).length, H = r.heat_min;
     var h = '<p class="eyebrow">관악구 21개 동, ' + r.time.slice(0, 10) + '</p>' +
@@ -146,13 +206,32 @@
       '<div><span>오늘 보전 시간</span><b class="fig">' + r.paid_hours + '<small>시간</small></b></div>' +
       '<div><span>오늘 지급 예정<sup>3</sup></span><b class="fig amt">' + won(r.amount) + '</b></div>' +
       '<div class="warn"><span>폭염 속 운행 시간</span><b class="fig">' + num(r.missed_hours) + '<small>시간</small></b></div></div>';
-    h += '<div class="admin-body"><section class="hero admin-map" aria-label="행정동별 체감온도">' +
+    h += '<div class="admin-body"><div class="admin-main">';
+    var peak = (r.hours || []).reduce(function (a, b) { return b.hot_hours > a.hot_hours ? b : a; }, { hour: null, hot_hours: 0 });
+    h += '<section class="card trend-card" aria-label="오늘 시간별 추이">' +
+      '<div class="sec sec-row"><h2>오늘 시간별 추이</h2>' +
+      '<span class="lg"><i style="background:var(--amber)"></i>폭염 속 운행 시간<i style="background:var(--sky);margin-left:14px"></i>그때 쉬던 라이더</span></div>' +
+      trendSvg(r) +
+      '<p class="note">' + (peak.hour != null && peak.hot_hours > 0
+        ? '오늘은 <b>' + peak.hour + '시</b>에 ' + num(Math.round(peak.hot_hours)) + '시간으로 가장 많았어요. 이 시각에 쉼터와 알림을 먼저 늘리면 돼요.'
+        : '아직 오늘 폭염 속 운행 기록이 없어요.') + '</p></section>';
+    h += '<section class="hero admin-map" aria-label="행정동별 체감온도">' +
       '<div class="hero-top"><span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도, " + esc(me.stage) + " 단계") : "관악구") + '</span>' +
       '<span class="hero-time fig">' + H + '도 이상 ' + hot + '곳 / 21곳<sup>1·2</sup></span></div>' +
       (S.geo ? mapSvg(r) : '<p class="note">지도 경계를 불러오는 중이에요.</p>') +
-      '<div class="legend"><span><i style="background:var(--sun)"></i>' + H + '도 이상: 보전 기준 (모델 값)<sup>1</sup></span><span><i style="background:var(--amber)"></i>35도 이상</span><span><i style="background:var(--ember)"></i>38도 이상</span><span>흰 테두리: ' + esc(me ? me.name : "") + ' (시연 위치)</span></div>' +
+      '<div class="legend heat-legend"><span class="hl"><i style="background:var(--sun)"></i><i style="background:#f5a83a"></i><i style="background:var(--amber)"></i><i style="background:var(--ember)"></i><i style="background:#a82c0c"></i>' +
+      '<em>' + H + '</em><em>33.5</em><em>35</em><em>36.5</em><em>38도</em></span>' +
+      '<span>' + H + '도부터 보전 기준<sup>1</sup></span><span>흰 테두리: ' + esc(me ? me.name : "") + ' (시연 위치)</span></div>' +
       '</section>';
     var top = r.dongs.slice().sort(function (a, b) { return b.missed_hours - a.missed_hours; }).slice(0, 5);
+    var shl = r.shelters || {};
+    h += '<section class="card rank-card"><div class="sec"><h2>조치가 필요한 동</h2></div>' +
+      '<p class="note">폭염 속 운행 시간이 많은 순서예요. 쉼터가 적은 동부터 늘리면 돼요.</p><ol class="rank">' + top.map(function (d) {
+        var n = shl[d.code] || 0;
+        return '<li><div class="rank-top"><b>' + esc(d.name) + '</b><span class="fig">' + num(d.missed_hours) + '<small>시간</small></span></div>' +
+          '<div class="rank-sub"><span>보전 ' + d.paid_hours + '시간 · ' + won(d.amount) + '</span>' +
+          '<span class="' + (n === 0 ? "shl none" : n <= 1 ? "shl few" : "shl") + '">쉼터 ' + n + '곳</span></div></li>';
+      }).join("") + '</ol></section></div>';
     h += '<div class="admin-side">';
     if (r.season) {
       var se = r.season;
@@ -179,20 +258,17 @@
         '<div class="warn"><span>불일치</span><b class="fig">' + num(v.mismatch || 0) + '<small>명</small></b></div></div>' +
         '<p class="note">라이더가 등록한 정산 내역을 앱 위치 기록과 한 달에 한 번 대조해요. 불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 기록이 자동으로 들어와 대조가 필요 없어요.' + (r.virtual ? ' 단계 배정(B 70%, C 30%)과 대조 상태는 시연용으로 지어낸 값이에요.' : '') + '</p>';
     }
-    h += '<div class="sec"><h2>오늘 폭염 속 운행 시간이 많은 동</h2></div><ol class="read rank">' + top.map(function (d) {
-      return '<li><b>' + esc(d.name) + '</b> ' + num(d.missed_hours) + '시간, 보전 ' + d.paid_hours + '시간 ' + won(d.amount) + '</li>';
-    }).join("") + '</ol>';
-    h += '<div class="sec"><h2>읽는 법</h2></div><ul class="read">' +
+    h += '<details class="fold"><summary>읽는 법</summary><ul class="read">' +
       '<li><b>체감온도</b>는 행정동 체감온도 모델 값이에요. ' + H + '도는 모델 값 전용 판정선(33도 − 모델 불확도)이에요.</li>' +
       '<li><b>폭염 속 운행 시간</b>은 그 시각 가장 오래 달린 동이 ' + H + '도 이상일 때 쉬지 않고 일한 라이더 시간의 합이에요. 많은 동부터 쉼터와 안내를 늘리면 돼요.</li>' +
       '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 평소 수입은 등록한 정산 내역이나 플랫폼 운행 기록으로 확인해요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
       '<li>보전 대상은 그 시간대에 최근 28일 중 12일 이상 일했고, 최근 2시간 배달 이동이 60분 이상이고, 쉬기 직전 1시간 가장 오래 달린 동이 ' + H + '도 이상인 라이더예요. 22~6시는 대상이 아니에요.</li>' +
-      '<li>판정은 가장 오래 달린 동으로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul>';
-    h += '<div class="sec"><h2>자료 출처</h2></div><ol class="src">' +
+      '<li>판정은 가장 오래 달린 동으로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul></details>';
+    h += '<details class="fold"><summary>자료 출처</summary><ol class="src">' +
       '<li>체감온도: 쉼표 행정동 체감온도 모델(2026 여름 예측, 팀 작성). 입력은 기상청 AWS·ASOS 시간자료(기상자료개방포털), 학습 정답은 서울시 S-DoT 도시데이터 센서(서울 열린데이터광장 OA-15969).</li>' +
       '<li>동 경계: 통계청 경계 기반 행정동 경계(ver20261001), 관악구 21개 동.</li>' +
       '<li>라이더·콜·지급: ' + (r.virtual ? '가상 라이더 ' + num(r.virtual_riders) + '명의 지어낸 콜 기록(팀 생성, 실제 플랫폼 기록 아님). 배달을 마칠 때마다 조건이 되면 정해진 비율이 30분 쉰다고 가정했어요(팀 분석 4와 같은 방식). 근거로 인용하지 마세요.' : 'DB의 실제 쉼 기록.') + '</li>' +
-      '<li>판정 기준: 팀 확정안(2026.11.9). 33도·2시간마다 20분 휴식은 산업안전보건기준에 관한 규칙(2025.7.17 시행).</li></ol>';
+      '<li>판정 기준: 팀 확정안(2026.11.9). 33도·2시간마다 20분 휴식은 산업안전보건기준에 관한 규칙(2025.7.17 시행).</li></ol></details>';
     return h + '</div></div>';
   }
 

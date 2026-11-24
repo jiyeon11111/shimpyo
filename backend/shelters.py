@@ -56,6 +56,18 @@ def is_rider_shelter(name: str, kind: str) -> bool:
     return "라이더" in text or "노동자" in text
 
 
+@lru_cache(maxsize=1)
+def count_by_dong() -> dict[str, int]:
+    """행정동 코드 → 그 동 안의 쉼터 수. 지자체 화면에서 운행 시간이 많은 동에 쉼터가 몇 곳인지 보여줄 때 쓴다."""
+    from . import gwanak
+    out: dict[str, int] = {}
+    for s in _load()[0]:
+        code = gwanak.inside(s["lat"], s["lon"])
+        if code:
+            out[code] = out.get(code, 0) + 1
+    return out
+
+
 def nearest(lat: float, lon: float, kind: str | None = None, limit: int = 10) -> dict:
     rows, virtual = _load()
     items = []

@@ -383,6 +383,42 @@ def dong_geo() -> dict:
         for f in gwanak.geo()["features"]]}
 
 
+DAY_START_H, DAY_END_H = 6, 23      # 지자체 화면 시간별 추이 범위
+
+
+def _by_hour(hours: dict, start_min: int, end_min: int, now_min: int, amount: int) -> None:
+    """쉼 한 건을 시간별 칸에 담는다.
+
+    end_min은 자르지 않은 진짜 끝이어야 한다. 현재 진행 중인 쉼을 현재 시각으로 잘라서 넘기면
+    정각에 쉬고 있는 사람이 빠져(840 < 840이 거짓) 지금 쉬는 라이더 수와 어긋난다.
+    resting은 그 시 정각에 쉬고 있던 사람, amount는 시작한 시에 전액.
+    """
+    if end_min <= start_min:
+        return
+    h0 = start_min // 60
+    if h0 in hours and start_min <= now_min:
+        hours[h0]["rests"] += 1
+        hours[h0]["amount"] += amount
+    for h in range(max(DAY_START_H, h0), min(DAY_END_H, end_min // 60 + 1)):
+        if h in hours and start_min <= h * 60 < end_min and h * 60 <= now_min:
+            hours[h]["resting"] += 1
+
+
+def _by_hour_row(hours: dict, row, mm: int) -> None:
+    """DB의 실제 쉼 기록 한 줄을 시간별 칸에 담는다."""
+    try:
+        s_ = int(row["start"][11:13]) * 60 + int(row["start"][14:16])
+    except (TypeError, ValueError, IndexError):
+        return
+    e_ = mm + 1   # 진행 중인 쉼은 아직 끝나지 않았다
+    if row["end"]:
+        try:
+            e_ = int(row["end"][11:13]) * 60 + int(row["end"][14:16])
+        except (TypeError, ValueError, IndexError):
+            return
+    _by_hour(hours, s_, e_, mm, row["amount"] or 0)
+
+
 def report(lat: float, lon: float, at: str | None = None) -> dict:
     """지자체·보험사 화면: 관악구 21개 동 체감온도 지도, 지금 쉬는 라이더, 오늘 보전 시간·지급 예정, 폭염 속 운행 시간.
 
@@ -411,6 +447,7 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
         x["paid_min"] += paid_min
         x["amount"] += amount
 
+    hours = {h: {"hour": h, "resting": 0, "rests": 0, "amount": 0, "hot_min": 0.0} for h in range(DAY_START_H, DAY_END_H)}
     dash = _dash() if config.DEMO_MODE else {"rests": {}, "hot": {}, "summary": None, "staged": None}
     vs = _virtual_stages() if config.DEMO_MODE else {}
     by_stage = {s: {"stage": s, "name": STAGE_NAMES[s], "basis": pay_hourly(s, 0)[1], "riders": 0, "paid_riders": set(),
@@ -444,11 +481,14 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
         res = settle_rest(start, start + timedelta(minutes=min(e_, mm) - s_), True, pay_hourly(st, int(r["평소시급"]))[0], int(r["앞선지급"]))
         add(r["판정동코드"], int(s_ <= mm < e_), res.paid_min, res.amount)
         add_stage(st, r["라이더ID"], res.paid_min, res.amount)
+        _by_hour(hours, s_, e_, mm, res.amount)
     for r in dash["hot"].get(day, []):
         h = int(r["시"])
         frac = 1.0 if (h + 1) * 60 <= mm else max(0.0, (mm - h * 60) / 60)
         if r["동코드"] in per:
             per[r["동코드"]]["missed_min"] += float(r["더위근무분"]) * frac
+            if h in hours:
+                hours[h]["hot_min"] += float(r["더위근무분"]) * frac
 
     with db.conn() as c:
         rows = c.execute("SELECT * FROM rests WHERE substr(start,1,10)=? AND virtual=0", (day,)).fetchall()
@@ -462,6 +502,7 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
     codes = {d["name"]: k for k, d in gwanak.dongs().items()}
     out = {"resting": 0, "paid_min": 0, "amount": 0}     # 관악구 밖 실제 쉼 기록 (지도에는 없고 합계에만)
     for row in rows:
+        _by_hour_row(hours, row, mm)
         r3 = (0, row["paid_min"] or 0, row["amount"] or 0) if row["end"] else (1, 0, 0)
         if (row["emd"] or "") in codes and row["sgg"] == gwanak.GU:
             add(codes[row["emd"]], *r3)
@@ -482,6 +523,9 @@ def report(lat: float, lon: float, at: str | None = None) -> dict:
             "missed_hours": round(sum(x["missed_hours"] for x in dongs)),
             "season": dash["summary"] and {k: dash["summary"][k] for k in
                                           ("season", "riders", "paid_riders", "paid_rests", "paid_hours", "amount", "missed_hours", "rest_p", "scenarios")},
+            "hours": [{**v, "hot_hours": round(v.pop("hot_min") / 60, 1)} for v in hours.values()],
+            "now_hour": t.hour,
+            "shelters": shelters.count_by_dong() if config.DEMO_MODE or True else {},
             "virtual": config.DEMO_MODE, "virtual_riders": (dash["summary"] or {}).get("riders", 0) if config.DEMO_MODE else 0,
             "stages": [{**{k: v for k, v in b.items() if k not in ("paid_riders", "paid_min")}, "paid_riders": len(b["paid_riders"]),
                         "paid_hours": round(b["paid_min"] / 60, 1),
