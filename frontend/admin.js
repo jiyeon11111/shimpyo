@@ -305,7 +305,7 @@
       '<li><i style="background:var(--line)"></i><span>대조 대기</span><b>' + num(v.pending || 0) + '명</b></li>' +
       '<li><i style="background:var(--ember)"></i><span>불일치</span><b>' + num(v.mismatch || 0) + '명</b></li></ul>' +
       '<p class="note foot">' + (r.virtual ? '대조 결과는 가정한 값이에요. ' : '') +
-      '불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 대조가 필요 없어요.</p></section>';
+      '시범에서는 판정 정확도를 재는 데만 쓰고 이미 준 돈은 환수하지 않아요. 플랫폼이 연동되면(C) 대조가 필요 없어요.</p></section>';
 
     var slots = [[6, 9], [9, 12], [12, 15], [15, 18], [18, 22]];
     var byslot = slots.map(function (sl) {
