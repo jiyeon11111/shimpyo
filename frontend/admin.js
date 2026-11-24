@@ -13,15 +13,17 @@
   function num(x) { return (+x).toLocaleString("ko-KR"); }
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   // 색: 32도 구간은 서버가 반올림 전 값으로 정한 hot을 쓴다 (화면의 32.0이 31.96일 수 있다)
+  // 밝은 카드 위에서 읽히도록 채도를 낮춘 단계. 진한 쪽일수록 더움
+  var HEAT = ["#C2410C", "#E8703A", "#F59E4B", "#FBC877", "#FDE39B", "#F3EBD8", "#DCE8F3"];
   function heat(t, hot) {
-    if (t == null) return "var(--cool)";
-    if (t >= 38) return "#a82c0c";
-    if (t >= 36.5) return "var(--ember)";
-    if (t >= 35) return "var(--amber)";
-    if (t >= 33.5) return "#f5a83a";
-    if (hot) return "var(--sun)";
-    if (t >= 31) return "var(--warm)";
-    return "var(--cool)";
+    if (t == null) return HEAT[6];
+    if (t >= 38) return HEAT[0];
+    if (t >= 36.5) return HEAT[1];
+    if (t >= 35) return HEAT[2];
+    if (t >= 33.5) return HEAT[3];
+    if (hot) return HEAT[4];
+    if (t >= 31) return HEAT[5];
+    return HEAT[6];
   }
   function api(path, params) {
     if (S.cfg.demo) params.at = hhmm(S.min);
@@ -266,7 +268,7 @@
     var sMap = '<section class="dcard map"><div class="dtop"><h2>동별 체감온도</h2>' +
       '<span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도") : "관악구") + '</span></div>' +
       (S.geo ? mapSvg(r) : '<p class="note">지도 경계를 불러오는 중이에요.</p>') +
-      '<div class="legend heat-legend"><span class="hl"><i style="background:var(--sun)"></i><i style="background:#f5a83a"></i><i style="background:var(--amber)"></i><i style="background:var(--ember)"></i><i style="background:#a82c0c"></i>' +
+      '<div class="legend heat-legend"><span class="hl"><i style="background:' + HEAT[4] + '"></i><i style="background:' + HEAT[3] + '"></i><i style="background:' + HEAT[2] + '"></i><i style="background:' + HEAT[1] + '"></i><i style="background:' + HEAT[0] + '"></i>' +
       '<em>' + H + '</em><em>33.5</em><em>35</em><em>36.5</em><em>38도</em></span>' +
       '<span>' + H + '도부터 보전 기준<sup>1</sup></span></div></section>';
 
