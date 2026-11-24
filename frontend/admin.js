@@ -146,6 +146,32 @@
   }
 
 
+
+  // 도넛: [{label, value, color}] — 가운데에 총합이나 한 줄을 넣는다
+  function donutSvg(parts, centerTop, centerBottom) {
+    var total = parts.reduce(function (a, p) { return a + p.value; }, 0) || 1;
+    var R = 54, r = 34, cx = 62, cy = 62, acc = -Math.PI / 2, out = "";
+    parts.forEach(function (p) {
+      if (p.value <= 0) return;
+      var ang = (p.value / total) * Math.PI * 2, end = acc + ang, big = ang > Math.PI ? 1 : 0;
+      var x1 = cx + R * Math.cos(acc), y1 = cy + R * Math.sin(acc), x2 = cx + R * Math.cos(end), y2 = cy + R * Math.sin(end);
+      var x3 = cx + r * Math.cos(end), y3 = cy + r * Math.sin(end), x4 = cx + r * Math.cos(acc), y4 = cy + r * Math.sin(acc);
+      out += '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + 'A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) +
+        'L' + x3.toFixed(1) + ' ' + y3.toFixed(1) + 'A' + r + ' ' + r + ' 0 ' + big + ' 0 ' + x4.toFixed(1) + ' ' + y4.toFixed(1) + 'Z" fill="' + p.color + '"/>';
+      acc = end;
+    });
+    if (centerTop) out += '<text x="' + cx + '" y="' + (cy + (centerBottom ? -2 : 6)) + '" text-anchor="middle" font-size="20" font-weight="800" fill="var(--ink)">' + centerTop + '</text>';
+    if (centerBottom) out += '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="11" fill="var(--mute)">' + centerBottom + '</text>';
+    return '<svg class="donut" viewBox="0 0 124 124" role="img">' + out + '</svg>';
+  }
+
+  // 진행 막대 한 줄
+  function barRow(label, value, max, color, right) {
+    var pct = Math.max(0, Math.min(100, max > 0 ? (value / max) * 100 : 0));
+    return '<div class="brow"><div class="brow-top"><span>' + label + '</span><b>' + right + '</b></div>' +
+      '<div class="btrack"><i style="width:' + pct.toFixed(1) + '%;background:' + color + '"></i></div></div>';
+  }
+
   // 오늘 시간별 추이: 막대는 폭염 속 운행 시간, 점·선은 그 시각에 쉬고 있던 라이더
   function trendSvg(r) {
     var hs = r.hours || [];
@@ -198,78 +224,110 @@
 
   function view(r) {
     var me = r.dongs.filter(function (d) { return d.me; })[0], hot = r.dongs.filter(function (d) { return d.hot; }).length, H = r.heat_min;
-    var h = '<p class="eyebrow">관악구 21개 동, ' + r.time.slice(0, 10) + '</p>' +
-      '<h1 class="title">' + (r.missed_hours > 0 ? "오늘 체감 " + H + "도 넘는 시간에 쉬지 않고 일한 라이더 시간이 " + num(r.missed_hours) + "시간이에요"
-        : hot ? H + "도를 넘은 동이 " + hot + "곳이에요. 아직 폭염 속 운행 시간은 없어요" : "지금은 모든 동이 " + H + "도 아래예요") + '</h1>';
-    h += '<div class="kpis">' +
-      '<div><span>지금 쉬는 라이더</span><b class="fig">' + r.resting + '<small>명</small></b></div>' +
-      '<div><span>오늘 보전 시간</span><b class="fig">' + r.paid_hours + '<small>시간</small></b></div>' +
-      '<div><span>오늘 지급 예정<sup>3</sup></span><b class="fig amt">' + won(r.amount) + '</b></div>' +
-      '<div class="warn"><span>폭염 속 운행 시간</span><b class="fig">' + num(r.missed_hours) + '<small>시간</small></b></div></div>';
-    h += '<div class="admin-body"><div class="admin-main">';
+    var se = r.season, shl = r.shelters || {}, v = r.verify || {};
+    var top = r.dongs.slice().sort(function (a, b) { return b.missed_hours - a.missed_hours; }).slice(0, 5);
     var peak = (r.hours || []).reduce(function (a, b) { return b.hot_hours > a.hot_hours ? b : a; }, { hour: null, hot_hours: 0 });
-    h += '<section class="card trend-card" aria-label="오늘 시간별 추이">' +
-      '<div class="sec sec-row"><h2>오늘 시간별 추이</h2>' +
-      '<span class="lg"><i style="background:var(--amber)"></i>폭염 속 운행 시간<i style="background:var(--sky);margin-left:14px"></i>그때 쉬던 라이더</span></div>' +
+
+    var h = '<div class="dash-head"><div><p class="eyebrow">관악구 21개 동 · ' + r.time.slice(0, 10) + '</p>' +
+      '<h1 class="title">' + (r.missed_hours > 0 ? "오늘 체감 " + H + "도 넘는 시간에 쉬지 않고 일한 라이더 시간이 " + num(r.missed_hours) + "시간이에요"
+        : hot ? H + "도를 넘은 동이 " + hot + "곳이에요" : "지금은 모든 동이 " + H + "도 아래예요") + '</h1></div></div>';
+
+    h += '<div class="dash">';
+
+    // 1) 오늘 요약 — 짙은 강조 카드
+    h += '<section class="dcard dark c3"><p class="dlab">지금 쉬는 라이더</p><b class="dfig">' + r.resting + '<small>명</small></b>' +
+      '<div class="dsplit"><div><span>오늘 보전</span><b>' + r.paid_hours + '시간</b></div><div><span>오늘 지급 예정<sup>3</sup></span><b>' + won(r.amount) + '</b></div></div>' +
+      '<div class="dwarn"><span>폭염 속 운행 시간</span><b>' + num(r.missed_hours) + '시간</b></div></section>';
+
+    // 2) 시간별 추이
+    h += '<section class="dcard c6"><div class="dtop"><h2>오늘 시간별 추이</h2>' +
+      '<span class="lg"><i style="background:var(--amber)"></i>폭염 속 운행<i style="background:var(--sky);margin-left:12px"></i>그때 쉬던 라이더</span></div>' +
       trendSvg(r) +
       '<p class="note">' + (peak.hour != null && peak.hot_hours > 0
-        ? '오늘은 <b>' + peak.hour + '시</b>에 ' + num(Math.round(peak.hot_hours)) + '시간으로 가장 많았어요. 이 시각에 쉼터와 알림을 먼저 늘리면 돼요.'
+        ? '<b>' + peak.hour + '시</b>에 ' + num(Math.round(peak.hot_hours)) + '시간으로 가장 많았어요. 이 시각부터 쉼터와 알림을 늘리면 돼요.'
         : '아직 오늘 폭염 속 운행 기록이 없어요.') + '</p></section>';
-    h += '<section class="hero admin-map" aria-label="행정동별 체감온도">' +
-      '<div class="hero-top"><span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도, " + esc(me.stage) + " 단계") : "관악구") + '</span>' +
-      '<span class="hero-time fig">' + H + '도 이상 ' + hot + '곳 / 21곳<sup>1·2</sup></span></div>' +
+
+    // 3) 단계별 지급 비중
+    if (r.stages) {
+      var pay = r.stages.filter(function (x) { return x.basis !== "none"; });
+      var parts = pay.map(function (x, i) { return { label: x.stage, value: (x.season && x.season.amount) || x.amount || 0, color: i ? "var(--sky)" : "var(--amber)" }; });
+      var tot = parts.reduce(function (a, p) { return a + p.value; }, 0);
+      h += '<section class="dcard c3"><div class="dtop"><h2>단계별 지급 비중</h2></div>' +
+        '<div class="dcenter">' + donutSvg(parts, num(r.stages.reduce(function (a, x) { return a + x.riders; }, 0)) + "명", "등록 라이더") + '</div>' +
+        '<ul class="dlist">' + pay.map(function (x, i) {
+          var amt = (x.season && x.season.amount) || x.amount || 0;
+          return '<li><i style="background:' + (i ? "var(--sky)" : "var(--amber)") + '"></i><span>' + x.stage + ' ' + esc(x.name) + '</span><b>' + (tot ? Math.round(amt / tot * 100) : 0) + '%</b></li>';
+        }).join("") + '<li><i style="background:var(--line)"></i><span>A 앱만 사용</span><b>지급 없음</b></li></ul></section>';
+    }
+
+    h += '</div>';   // 윗줄 끝
+
+    // ── 아랫단: 세 열에 쌓는다 (칸마다 높이가 달라 생기는 빈자리를 없앤다)
+    var sMap = '<section class="dcard map"><div class="dtop"><h2>동별 체감온도</h2>' +
+      '<span class="chip"><i style="background:' + heat(me && me.temp, me && me.hot) + '"></i>' + (me ? esc(me.name) + " " + (me.temp == null ? "-" : me.temp.toFixed(1) + "도") : "관악구") + '</span></div>' +
       (S.geo ? mapSvg(r) : '<p class="note">지도 경계를 불러오는 중이에요.</p>') +
       '<div class="legend heat-legend"><span class="hl"><i style="background:var(--sun)"></i><i style="background:#f5a83a"></i><i style="background:var(--amber)"></i><i style="background:var(--ember)"></i><i style="background:#a82c0c"></i>' +
       '<em>' + H + '</em><em>33.5</em><em>35</em><em>36.5</em><em>38도</em></span>' +
-      '<span>' + H + '도부터 보전 기준<sup>1</sup></span><span>흰 테두리: ' + esc(me ? me.name : "") + ' (시연 위치)</span></div>' +
-      '</section>';
-    var top = r.dongs.slice().sort(function (a, b) { return b.missed_hours - a.missed_hours; }).slice(0, 5);
-    var shl = r.shelters || {};
-    h += '<section class="card rank-card"><div class="sec"><h2>조치가 필요한 동</h2></div>' +
-      '<p class="note">폭염 속 운행 시간이 많은 순서예요. 쉼터가 적은 동부터 늘리면 돼요.</p><ol class="rank">' + top.map(function (d) {
+      '<span>' + H + '도부터 보전 기준<sup>1</sup></span></div></section>';
+
+    var sRank = '<section class="dcard"><div class="dtop"><h2>조치가 필요한 동</h2></div>' +
+      '<p class="note">쉼터가 적은 동부터 늘리면 돼요</p><ol class="rank">' + top.map(function (d) {
         var n = shl[d.code] || 0;
         return '<li><div class="rank-top"><b>' + esc(d.name) + '</b><span class="fig">' + num(d.missed_hours) + '<small>시간</small></span></div>' +
-          '<div class="rank-sub"><span>보전 ' + d.paid_hours + '시간 · ' + won(d.amount) + '</span>' +
+          '<div class="rank-sub"><span>보전 ' + d.paid_hours + '시간</span>' +
           '<span class="' + (n === 0 ? "shl none" : n <= 1 ? "shl few" : "shl") + '">쉼터 ' + n + '곳</span></div></li>';
-      }).join("") + '</ol></section></div>';
-    h += '<div class="admin-side">';
-    if (r.season) {
-      var se = r.season;
-      h += '<div class="sec"><h2>2026 여름 합계</h2></div><p class="note">' + se.season[0].slice(5).replace("-", "/") + '~' + se.season[1].slice(5).replace("-", "/") + ', 가상 라이더 ' + num(se.riders) + '명</p>' +
-        '<div class="kpis season"><div><span>보전 인원</span><b class="fig">' + num(se.paid_riders) + '<small>명</small></b></div>' +
-        '<div><span>보전 시간</span><b class="fig">' + num(se.paid_hours) + '<small>시간</small></b></div>' +
-        '<div><span>지급액</span><b class="fig amt">' + won(se.amount) + '</b></div>' +
-        '<div class="warn"><span>폭염 속 운행 시간</span><b class="fig">' + num(Math.round(se.missed_hours)) + '<small>시간</small></b></div></div>';
-      var sc = se.scenarios || {};
-      if (sc["1.0"] && sc["0.25"]) h += '<p class="note">자격이 될 때 ' + Math.round((se.rest_p || 0.5) * 100) + '%가 쉰다고 본 값이에요. 모두 쉬면 ' + won(sc["1.0"].amount) +
-        ', 4분의 1만 쉬면 ' + won(sc["0.25"].amount) + '이에요.<sup>3</sup></p>';
+      }).join("") + '</ol></section>';
+
+    var sSeason = "";
+    if (se) {
+      var d0 = new Date(se.season[0]), d1 = new Date(se.season[1]), dn = new Date(r.time.slice(0, 10));
+      var pct = Math.max(0, Math.min(100, (dn - d0) / (d1 - d0) * 100));
+      sSeason = '<section class="dcard"><div class="dtop"><h2>2026 여름</h2><span class="pill-s">' + Math.round(pct) + '% 지남</span></div>' +
+        '<b class="dfig amt">' + won(se.amount) + '</b><p class="note">지금까지 지급액</p>' +
+        '<div class="dbars">' +
+        barRow("여름 기간", pct, 100, "var(--sky)", se.season[0].slice(5).replace("-", "/") + "~" + se.season[1].slice(5).replace("-", "/")) +
+        barRow("보전 받은 라이더", se.paid_riders, se.riders, "var(--amber)", num(se.paid_riders) + " / " + num(se.riders) + "명") +
+        barRow("보전된 시간", se.paid_hours, se.missed_hours, "var(--sun)", num(se.paid_hours) + " / " + num(Math.round(se.missed_hours)) + "시간") +
+        '</div><p class="note foot">폭염 속 운행 시간 중 쉼표로 보전된 비율이에요<sup>3</sup></p></section>';
     }
-    if (r.stages) {
-      h += '<div class="sec"><h2>데이터 연동 단계별</h2></div><p class="note">지급은 정산 내역 기반이에요. 정산 내역을 등록했거나(B) 플랫폼이 연동된(C) 라이더만 평소 시간당 수입으로 받고, 앱만 쓰는 라이더(A)는 알림과 모의 판정만 받아요.<sup>3</sup></p>' +
-        '<table class="stage-table"><thead><tr><th>단계</th><th>등록</th><th>오늘 받은 사람</th><th>오늘 지급 예정</th><th>여름 합계</th></tr></thead><tbody>' +
-        r.stages.map(function (s) {
-          var pays = s.basis !== "none";
-          return '<tr><td><b>' + s.stage + ' ' + esc(s.name) + '</b><small>' + (pays ? "평소 수입" : "지급 없음") + '</small></td><td>' + num(s.riders) + '명</td><td>' + (pays ? num(s.paid_riders) + "명" : "-") + '</td><td>' + (pays ? won(s.amount) : "-") + '</td><td>' + (pays && s.season ? won(s.season.amount) : "-") + '</td></tr>';
-        }).join("") + '</tbody></table>';
-      var v = r.verify || {};
-      h += '<div class="sec"><h2>정산 내역 사후 대조 (B단계)</h2></div>' +
-        '<div class="kpis verify"><div><span>대조 대기</span><b class="fig">' + num(v.pending || 0) + '<small>명</small></b></div>' +
-        '<div><span>확인 완료</span><b class="fig">' + num(v.verified || 0) + '<small>명</small></b></div>' +
-        '<div class="warn"><span>불일치</span><b class="fig">' + num(v.mismatch || 0) + '<small>명</small></b></div></div>' +
-        '<p class="note">라이더가 등록한 정산 내역을 앱 위치 기록과 한 달에 한 번 대조해요. 불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 기록이 자동으로 들어와 대조가 필요 없어요.' + (r.virtual ? ' 단계 배정(B 70%, C 30%)과 대조 상태는 시연용으로 지어낸 값이에요.' : '') + '</p>';
-    }
+
+    var sVerify = '<section class="dcard"><div class="dtop"><h2>정산 내역 사후 대조</h2><span class="pill-s">B단계</span></div>' +
+      '<div class="dcenter">' + donutSvg([
+        { value: v.verified || 0, color: "var(--sky)" }, { value: v.pending || 0, color: "var(--line)" }, { value: v.mismatch || 0, color: "var(--ember)" }
+      ], num(v.mismatch || 0) + "건", "불일치") + '</div>' +
+      '<ul class="dlist"><li><i style="background:var(--sky)"></i><span>확인 완료</span><b>' + num(v.verified || 0) + '명</b></li>' +
+      '<li><i style="background:var(--line)"></i><span>대조 대기</span><b>' + num(v.pending || 0) + '명</b></li>' +
+      '<li><i style="background:var(--ember)"></i><span>불일치</span><b>' + num(v.mismatch || 0) + '명</b></li></ul>' +
+      '<p class="note foot">불일치면 지급을 멈추고 다시 등록받아요. 플랫폼이 연동되면(C) 대조가 필요 없어요.</p></section>';
+
+    var slots = [[6, 9], [9, 12], [12, 15], [15, 18], [18, 22]];
+    var byslot = slots.map(function (sl) {
+      return { label: sl[0] + "~" + sl[1] + "시", amount: (r.hours || []).filter(function (x) { return x.hour >= sl[0] && x.hour < sl[1]; }).reduce(function (a, x) { return a + x.amount; }, 0) };
+    });
+    var mx = Math.max.apply(null, byslot.map(function (x) { return x.amount; })) || 1;
+    var sSlots = '<section class="dcard"><div class="dtop"><h2>시간대별 지급액</h2></div><div class="dbars">' +
+      byslot.map(function (x) { return barRow(x.label, x.amount, mx, x.amount === mx ? "var(--amber)" : "var(--sky-soft)", won(x.amount)); }).join("") +
+      '</div><p class="note foot">보전 대상 시간대는 06~22시예요. 22~6시는 대상이 아니에요.</p></section>';
+
+    h += '<div class="dash-lower">' +
+      '<div class="dcol wide">' + sMap + sSlots + '</div>' +
+      '<div class="dcol">' + sRank + '</div>' +
+      '<div class="dcol">' + sSeason + sVerify + '</div>' +
+      '</div>';
+
+
     h += '<details class="fold"><summary>읽는 법</summary><ul class="read">' +
       '<li><b>체감온도</b>는 행정동 체감온도 모델 값이에요. ' + H + '도는 모델 값 전용 판정선(33도 − 모델 불확도)이에요.</li>' +
       '<li><b>폭염 속 운행 시간</b>은 그 시각 가장 오래 달린 동이 ' + H + '도 이상일 때 쉬지 않고 일한 라이더 시간의 합이에요. 많은 동부터 쉼터와 안내를 늘리면 돼요.</li>' +
-      '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 평소 수입은 등록한 정산 내역이나 플랫폼 운행 기록으로 확인해요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
-      '<li>보전 대상은 그 시간대에 최근 28일 중 12일 이상 일했고, 최근 2시간 배달 이동이 60분 이상이고, 쉬기 직전 1시간 가장 오래 달린 동이 ' + H + '도 이상인 라이더예요. 22~6시는 대상이 아니에요.</li>' +
+      '<li><b>오늘 지급 예정</b>은 라이더마다 평소 시간당 수입(최근 4주 같은 요일·같은 시각 평균, 최대 2만 원)에 쉰 분(최대 30분)을 곱한 값이에요. 20분 넘게 쉰 경우만, 한 번 최대 1만 원·하루 4번까지 셉니다.</li>' +
+      '<li>보전 대상은 그 시간대에 최근 28일 중 12일 이상 일했고, 최근 2시간 배달 이동이 60분 이상이고, 쉬기 직전 1시간 가장 오래 달린 동이 ' + H + '도 이상인 라이더예요.</li>' +
       '<li>판정은 가장 오래 달린 동으로, 재원은 라이더 거주지 지자체로 나눠요.</li></ul></details>';
     h += '<details class="fold"><summary>자료 출처</summary><ol class="src">' +
       '<li>체감온도: 쉼표 행정동 체감온도 모델(2026 여름 예측, 팀 작성). 입력은 기상청 AWS·ASOS 시간자료(기상자료개방포털), 학습 정답은 서울시 S-DoT 도시데이터 센서(서울 열린데이터광장 OA-15969).</li>' +
-      '<li>동 경계: 통계청 경계 기반 행정동 경계(ver20261001), 관악구 21개 동.</li>' +
-      '<li>라이더·콜·지급: ' + (r.virtual ? '가상 라이더 ' + num(r.virtual_riders) + '명의 지어낸 콜 기록(팀 생성, 실제 플랫폼 기록 아님). 배달을 마칠 때마다 조건이 되면 정해진 비율이 30분 쉰다고 가정했어요(팀 분석 4와 같은 방식). 근거로 인용하지 마세요.' : 'DB의 실제 쉼 기록.') + '</li>' +
+      '<li>동 경계: 통계청 경계 기반 행정동 경계(ver20261001), 관악구 21개 동. 쉼터: 행정안전부 무더위쉼터 · 서울노동포털 이동노동자 쉼터.</li>' +
+      '<li>라이더·콜·지급: ' + (r.virtual ? '가상 라이더 ' + num(r.virtual_riders) + '명의 지어낸 콜 기록(팀 생성, 실제 플랫폼 기록 아님). 배달을 마칠 때마다 조건이 되면 정해진 비율이 30분 쉰다고 가정했어요(팀 분석 4와 같은 방식). 근거로 인용하지 마세요. 단계 배정(B 70%, C 30%)과 대조 상태도 시연용이에요.' : 'DB의 실제 쉼 기록.') + '</li>' +
       '<li>판정 기준: 팀 확정안(2026.11.9). 33도·2시간마다 20분 휴식은 산업안전보건기준에 관한 규칙(2025.7.17 시행).</li></ol></details>';
-    return h + '</div></div>';
+    return h;
   }
 
   // 리포트 계산이 시연 시계(0.7초마다)보다 느릴 수 있다. 응답을 버리지 않고 그리고 나서, 그사이 시각이 바뀌었으면 한 번 더 부른다.

@@ -1,6 +1,10 @@
-/* 글꼴: 배달의민족 주아체(BM JUA, SIL OFL 1.1, frontend/fonts). 사용자가 고름. 파일을 앱에 같이 넣어 인터넷 없이도 같은 글꼴로 보인다.
-   굵기가 하나뿐이라 굵은 글씨를 억지로 만들지 않는다(font-synthesis:none). 위계는 크기와 색으로 준다. 숫자도 같은 글꼴이다. */
-@font-face{font-family:"BM JUA";font-weight:100 900;font-display:swap;src:url("fonts/BMJUA.woff") format("woff")}
+/* 글꼴: Pretendard (SIL OFL 1.1, frontend/fonts). 사용자가 2026-11-24에 고름. CDN은 쓰지 않는다 —
+   발표장에 인터넷이 없어도 같은 글꼴로 보여야 한다. 컴퓨터에 설치돼 있으면 local()이 먼저 잡고,
+   없으면 같이 넣은 가변 폰트 파일을 쓴다. 둘 다 없으면 시스템 고딕으로 내려간다.
+   BM JUA와 달리 굵기가 진짜로 있으므로 400~800을 쓴다(가짜 굵기를 만들던 font-synthesis:none은 뺐다). */
+@font-face{font-family:"Pretendard";font-style:normal;font-weight:45 920;font-display:swap;
+  src:local("Pretendard Variable"),local("PretendardVariable"),local("Pretendard"),
+      url("fonts/PretendardVariable.woff2") format("woff2-variations")}
 /* 쉼표 앱 (5차 디자인: 하늘색 바탕 + 주황 포인트, 흰 유리 카드. 발표 슬라이드와 같은 느낌)
    바탕은 옅은 하늘색, 카드는 흰색 반투명, 누르는 것과 받는 돈은 주황, 짙은 면은 남색(지자체 지도)에만 쓴다.
    쉬는 중·완료 화면도 밝은 하늘색이다(.phone.dark는 이름만 남았다). 어두운 모드는 두지 않는다.
@@ -30,8 +34,8 @@
   --glass:rgba(255,255,255,.84);
   --shadow:0 10px 24px -16px rgba(38,88,150,.45),0 1px 2px rgba(38,88,150,.06);
   --r-xl:24px; --r-lg:18px; --r-md:12px;
-  --sans:"BM JUA","Apple SD Gothic Neo","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",system-ui,sans-serif;
-  --fig:"BM JUA","Apple SD Gothic Neo","Noto Sans CJK KR",system-ui,sans-serif;
+  --sans:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",system-ui,sans-serif;
+  --fig:"Pretendard","Pretendard Variable","Apple SD Gothic Neo","Noto Sans CJK KR",system-ui,sans-serif;
   color-scheme:light;
 }
 .admin .hero{--cool:#3a5578}   /* 남색 면 위의 31도 미만 칸 */
@@ -618,7 +622,6 @@ body{background:linear-gradient(180deg,#cfe1f3,#e3eef9 900px) no-repeat,#e3eef9}
 @media (min-width:481px){.phone{height:min(780px,calc(100vh - 110px))}}
 @media (max-height:800px){.ring-in b.long{font-size:30px}}
 /* 주아체: 굵기 하나. 가짜 굵기를 만들지 않고, 둥근 글자라 자간을 조금 풀어 준다 */
-html{font-synthesis:none}
 body{letter-spacing:0}
 .title,.verdict .vv,.ask-t,.state b,.sec h2,.card-t,.word{letter-spacing:0}
 /* 홈 응원 한마디 */
@@ -745,9 +748,54 @@ button.ring{margin-top:16px}
 .itemp .bars{height:56px;margin-top:14px}
 .itemp .card-s{margin-top:10px}
 
+/* ── 지자체 화면: 12칼럼 카드 격자 (2026-11-24, 레퍼런스 대시보드 구성) ── */
+.dash-head{margin:4px 0 14px}
+.dash{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;align-items:start}
+.dash-lower{display:grid;grid-template-columns:6fr 3fr 3fr;gap:14px;align-items:start;margin-top:14px}
+.dcol{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (max-width:1180px){.dash-lower{grid-template-columns:1fr 1fr}.dcol.wide{grid-column:span 2}}
+@media (max-width:720px){.dash-lower{grid-template-columns:1fr}.dcol.wide{grid-column:span 1}}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}
+@media (max-width:1180px){.c3{grid-column:span 6}.c6{grid-column:span 12}}
+@media (max-width:720px){.c3,.c4,.c6{grid-column:span 12}}
+
+.dcard{background:var(--card);border-radius:var(--r-xl);padding:16px 18px;box-shadow:var(--shadow);min-width:0}
+.dcard>*+*{margin-top:8px}
+.dcard.map{background:var(--forest);padding:14px 16px}
+.dcard.dark{background:var(--forest);color:var(--on-forest)}
+.dtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dtop h2{font-size:15px;font-weight:700;margin:0;color:var(--ink)}
+.dcard.map .dtop h2,.dcard.dark .dtop h2{color:var(--on-forest)}
+.dlab{font-size:13px;color:var(--on-forest-mute);margin:0}
+.dfig{font-size:40px;font-weight:800;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:0}
+.dfig small{font-size:16px;font-weight:700;margin-left:3px}
+.dfig.amt{font-size:28px;color:var(--amber-d)}
+.dsplit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.dsplit span{display:block;font-size:12px;color:var(--on-forest-mute)}
+.dsplit b{font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.dwarn{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:12px;flex-wrap:wrap;
+  background:rgba(245,189,69,.16);border-radius:var(--r-md);padding:8px 12px}
+.dwarn span{font-size:12px;color:var(--sun)}
+.dwarn b{font-size:18px;font-weight:800;color:var(--sun)}
+.dcenter{display:flex;justify-content:center;padding:2px 0}
+svg.donut{width:124px;height:124px;display:block}
+.dlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.dlist li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute)}
+.dlist li i{width:10px;height:10px;border-radius:3px;flex:none}
+.dlist li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlist li b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.pill-s{font-size:12px;font-weight:700;color:var(--sky);background:var(--sky-soft);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.dbars{display:flex;flex-direction:column;gap:9px}
+.brow-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;color:var(--mute);margin-bottom:3px}
+.brow-top b{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.btrack{height:8px;border-radius:999px;background:var(--bg);overflow:hidden}
+.btrack i{display:block;height:100%;border-radius:999px}
+.dcard .note{margin:6px 0 0;font-size:12px}
+.dcard .note.foot{margin-top:10px}
+.dcard .dfig{margin-top:2px}
+.dcard.map .legend{margin-top:8px}
+
 /* ── 지자체 화면 손질 (2026-11-24): 시간별 추이, 조치가 필요한 동, 접는 블록 ── */
-.admin-main{display:flex;flex-direction:column;gap:16px;min-width:0}
-.trend-card{background:var(--card);border-radius:var(--r-xl);padding:18px 20px 14px;box-shadow:var(--shadow)}
 .trend-card .sec{margin:0 0 10px}
 .sec-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sec-row h2{margin:0}
@@ -775,7 +823,6 @@ details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary::after{content:"펼치기";font-size:13px;font-weight:600;color:var(--mute)}
 details.fold[open]>summary::after{content:"접기"}
 details.fold>ul,details.fold>ol{margin:0;padding:0 18px 16px 34px}
-.rank-card{background:transparent;box-shadow:none;padding:0}
 .rank-card .note{margin:4px 0 0}
 .heat-legend .hl{display:flex;align-items:center;gap:0;flex-wrap:wrap}
 .heat-legend .hl i{width:26px;height:12px;border-radius:0;margin:0}
