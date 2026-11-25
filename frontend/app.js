@@ -62,7 +62,7 @@
   // 지급 기준 한 줄: 지급은 정산 내역 기반이라 늘 평소 이 시간 수입이다 (서버가 준 시급을 그대로 보여준다)
   function basisText(basis, hourly) { return "평소 이 시간 수입(시간당 " + won(hourly) + ")"; }
   var DEMO_SETTLE_FILE = "가상_정산내역_민수_2026-07.csv";   // 시연용: 가상 라이더 콜 기록으로 만든 정산 내역
-  function rules() { var c = S.cfg || {}; return { heat: c.heat_min || 32, need: c.exposure_need_min || 60, rest: c.rest_min || 20, cap: c.pay_cap_min || 30, capWon: c.pay_cap_won || 10000, labor: c.labor_need_days || 12, times: c.daily_rests || 4 }; }
+  function rules() { var c = S.cfg || {}; return { heat: c.heat_min || 32, need: c.exposure_need_min || 60, rest: c.rest_min || 20, cap: c.pay_cap_min || 30, capWon: c.pay_cap_won || 10000, labor: c.labor_need_days || 10, times: c.daily_rests || 4 }; }
 
   // ---------- 시작 ----------
   function vSplash() {

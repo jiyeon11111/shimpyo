@@ -232,7 +232,7 @@ def test_report_stage_breakdown_keeps_plan_numbers(svc):
     assert (st["A"]["basis"], st["A"]["riders"], st["A"]["amount"]) == ("none", 0, 0)   # 가상 라이더는 모두 등록한 것으로 본다
     assert st["B"]["basis"] == st["C"]["basis"] == "usual" and st["B"]["riders"] > st["C"]["riders"] > 0
     # 정액이 없으니 여름 합계는 기획서 숫자(가상 1,000명, 절반이 쉼) 그대로다
-    assert sum(s["season"]["amount"] for s in r["stages"]) == r["season"]["amount"] == 114_185_957
+    assert sum(s["season"]["amount"] for s in r["stages"]) == r["season"]["amount"] == 126_213_124
     assert r["verify"]["verified"] > r["verify"]["pending"] > r["verify"]["mismatch"] > 0
 
 
