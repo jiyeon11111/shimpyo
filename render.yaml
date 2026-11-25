@@ -1,0 +1,17 @@
+# Render 블루프린트: render.com > New > Blueprint 에서 이 저장소를 고르면 시연 모드로 배포된다.
+services:
+  - type: web
+    name: shimpyo
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements-deploy.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/config
+    envVars:
+      - key: SHIMPYO_DEMO
+        value: "1"
+      - key: SHIMPYO_DB
+        value: /tmp/shimpyo.db
+      - key: PYTHON_VERSION
+        value: 3.11.9

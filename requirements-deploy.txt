@@ -1,0 +1,5 @@
+# 배포(Render)용 최소 의존성: 서버와 판정 엔진만
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+numpy>=1.26
